@@ -112,7 +112,7 @@ subroutine advance(t)
   complex(r_kind), allocatable, dimension(:,:,:) :: dtracerspecdt_iau
   complex(r_kind), allocatable, dimension(:)  :: dlnpsspecdt_iau
   integer nt, k, n
-  logical :: profile = .true. ! print out timing stats
+  logical :: profile = .false. ! print out timing stats
   integer(8) count, count_rate, count_max
   real(8) t1,t2,t0,t4
 
@@ -179,8 +179,8 @@ subroutine advance(t)
      dlnpsspecdt_orig = dlnpsspecdt_orig + dlnpsspecdt_iau
 !$omp end workshare
   endif
-  if (profile) print *,'time in getdyntend (stage 1) =',t2-t1
-  print *, dt, a21, aa21
+  !if (profile) print *,'time in getdyntend (stage 1) =',t2-t1
+  !print *, dt, a21, aa21
   ! update vorticity and tracers (always explicit)
 !$omp workshare
   vrtspec=vrtspec_orig+a21*dt*dvrtspecdt_orig
@@ -230,7 +230,7 @@ subroutine advance(t)
   call getdyntend(dvrtspecdt1,ddivspecdt1,dvirtempspecdt1,dtracerspecdt1,dlnpsspecdt1,2)
   call system_clock(count, count_rate, count_max)
   t2 = count*1.d0/count_rate
-  if (profile) print *,'time in getdyntend (stage 2) =',t2-t1
+  !if (profile) print *,'time in getdyntend (stage 2) =',t2-t1
   ! add IAU contribution (constant over RK sub-steps).
   if (iau) then
 !$omp workshare
@@ -296,7 +296,7 @@ subroutine advance(t)
   call getdyntend(dvrtspecdt2,ddivspecdt2,dvirtempspecdt2,dtracerspecdt2,dlnpsspecdt2,3)
   call system_clock(count, count_rate, count_max)
   t2 = count*1.d0/count_rate
-  if (profile) print *,'time in getdyntend (stage 3) =',t2-t1
+  !if (profile) print *,'time in getdyntend (stage 3) =',t2-t1
   ! add IAU contribution (constant over RK sub-steps).
   if (iau) then
 !$omp workshare
@@ -375,7 +375,7 @@ subroutine advance(t)
 
   call system_clock(count, count_rate, count_max)
   t4 = count*1.d0/count_rate
-  if (profile) print *,'time in dynamics update=',t4-t0
+  !if (profile) print *,'time in dynamics update=',t4-t0
   ! apply physics parameterizations as an adjustment to fields updated by dynamics.
   ! (time-split approach)
   if (.not. adiabatic) then
@@ -395,7 +395,7 @@ subroutine advance(t)
      call getphytend(dvrtspecdt1,ddivspecdt1,dvirtempspecdt1,dtracerspecdt1,dlnpsspecdt1,t,dt)
      call system_clock(count, count_rate, count_max)
      t2 = count*1.d0/count_rate
-     if (profile) print *,'time in getphytend=',t2-t1
+     ! if (profile) print *,'time in getphytend=',t2-t1
 !$omp workshare
      vrtspec=vrtspec+dt*dvrtspecdt1
      divspec=divspec+dt*ddivspecdt1
