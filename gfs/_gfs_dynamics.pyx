@@ -1,6 +1,6 @@
-cimport numpy as cnp;
-import numpy as np;
-from numpy import empty;
+cimport numpy as cnp
+import numpy as np
+from numpy import empty
 
 #ctypedef cnp.ndarray[complex, ndim=3] Cplx3d
 #ctypedef cnp.ndarray[complex, ndim=2] Cplx2d
@@ -177,41 +177,41 @@ cdef class _gfs_dynamics:
             ntrunc, ndimspec, ntrac, fhmax, deltim,\
             heldsuarez, dt, pdryini, fhout
 # Read in the namelist
-#        gfsReadNamelist();
+#        gfsReadNamelist()
 
 
 # Read in the grid sizes (mainly to improve readability)
         if(numLats):
-            nlats = <int>numLats;
+            nlats = <int>numLats
         
         if(numLons):
-            nlons = <int>numLons;
-            ntrunc = <int>numLons/3 - 2;
-            ndimspec = (ntrunc+1)*(ntrunc+2)/2;
+            nlons = <int>numLons
+            ntrunc = <int>numLons/3 - 2
+            ndimspec = (ntrunc+1)*(ntrunc+2)/2
 
         if(timestep):
-            deltim = <double>timestep;
-            dt = <double>timestep;
+            deltim = <double>timestep
+            dt = <double>timestep
 
 
-        nlevs = 28;
-        pdryini = <double> dryPressure;
-        ntrac = <int>numTracers;
-        heldsuarez = useHeldSuarez;
-        fhmax = 9600;
-        fhout = 24;
-        adiabatic = False;
-        dry = True;
+        nlevs = 28
+        pdryini = <double> dryPressure
+        ntrac = <int>numTracers
+        heldsuarez = useHeldSuarez
+        fhmax = 9600
+        fhout = 24
+        adiabatic = False
+        dry = True
 
-        self.numLats = nlats;
-        self.numLons = nlons;
-        self.numLevs = nlevs;
-        self.numTrunc = ntrunc;
-        self.spectralDim = ndimspec;
-        self.numTracers = ntrac;
+        self.numLats = nlats
+        self.numLons = nlons
+        self.numLevs = nlevs
+        self.numTrunc = ntrunc
+        self.spectralDim = ndimspec
+        self.numTracers = ntrac
 
         print 'Lats, lons, levs, trunc, dims, tracers', nlats, nlons, nlevs,\
-            ntrunc, ndimspec, ntrac;
+            ntrunc, ndimspec, ntrac
 
 
 # method to reconfigure model after instantiation. HAVE to call init model
@@ -221,18 +221,18 @@ cdef class _gfs_dynamics:
         global adiabatic, dry, nlats, nlons, nlevs, ntrunc, ndimspec, ntrac
 
         if(numLats):
-            self.numLats = <int>numLats;
-            nlats = self.numLats;
+            self.numLats = <int>numLats
+            nlats = self.numLats
 
         if(numLons):
-            print self.numLons;
-            self.numLons = <int>numLons;
-            nlons = self.numLons;
-            self.numTrunc = self.numLons/3;
-            self.spectralDim = (self.numTrunc+1)*(self.numTrunc+2)/2;
+            print self.numLons
+            self.numLons = <int>numLons
+            nlons = self.numLons
+            self.numTrunc = self.numLons/3
+            self.spectralDim = (self.numTrunc+1)*(self.numTrunc+2)/2
             
-            ntrunc = self.numTrunc;
-            ndimspec = self.spectralDim;
+            ntrunc = self.numTrunc
+            ndimspec = self.spectralDim
 
         print 'Current Lats, lons, trunc, dims', nlats, nlons, ntrunc, ndimspec
         print 'Current Lats, lons, trunc, dims', self.numLats, self.numLons,\
@@ -242,38 +242,38 @@ cdef class _gfs_dynamics:
     def initModel(self):
 
         if(self.modelIsInitialised):
-            self.shutDownModel();
+            self.shutDownModel()
 
-        self.initSpectralArrays();
-        self.initGridArrays();
-        self.initPressureArrays();
+        self.initSpectralArrays()
+        self.initGridArrays()
+        self.initPressureArrays()
 
 # Now that the arrays are initialised, call dynamics and physics init
 
-        gfsInitDynamics();
-        gfsInitPhysics();
-        self.modelIsInitialised = 1;
+        gfsInitDynamics()
+        gfsInitPhysics()
+        self.modelIsInitialised = 1
 
 # Create the spectral arrays (defined in spectral_data.f90)
 
     def initSpectralArrays(self):
         global adiabatic, dry, nlats, nlons, nlevs, ntrunc, ndimspec, ntrac
 
-        self.pyTracerSpec = np.zeros((ndimspec, nlevs, ntrac),dtype=complex, order='F');
+        self.pyTracerSpec = np.zeros((ndimspec, nlevs, ntrac),dtype=complex, order='F')
 
-#self.pyVrtSpec = np.zeros((ndimspec, nlevs),dtype=complex, order='F');
-        self.pyVrtSpec = np.array(np.arange(ndimspec*nlevs).reshape(ndimspec, nlevs),dtype=complex, order='F');
+#self.pyVrtSpec = np.zeros((ndimspec, nlevs),dtype=complex, order='F')
+        self.pyVrtSpec = np.array(np.arange(ndimspec*nlevs).reshape(ndimspec, nlevs),dtype=complex, order='F')
         self.pyVirtTempSpec = np.zeros((ndimspec, nlevs),dtype=complex, \
-                order='F');
-        self.pyDivSpec = np.zeros((ndimspec, nlevs),dtype=complex,order='F');
+                order='F')
+        self.pyDivSpec = np.zeros((ndimspec, nlevs),dtype=complex,order='F')
 
         
-        self.pyTopoSpec = np.zeros(ndimspec,dtype=complex);
-        self.pyLnPsSpec = np.zeros(ndimspec,dtype=complex);
-        self.pyDissSpec = np.zeros(ndimspec,dtype=complex);
+        self.pyTopoSpec = np.zeros(ndimspec,dtype=complex)
+        self.pyLnPsSpec = np.zeros(ndimspec,dtype=complex)
+        self.pyDissSpec = np.zeros(ndimspec,dtype=complex)
         
-        self.pyDmpProf = np.zeros(nlevs,dtype=complex);
-        self.pyDiffProf = np.zeros(nlevs,dtype=complex);
+        self.pyDmpProf = np.zeros(nlevs,dtype=complex)
+        self.pyDiffProf = np.zeros(nlevs,dtype=complex)
 
         if(ntrac > 0):
             initialiseSpectralArrays(\
@@ -285,7 +285,7 @@ cdef class _gfs_dynamics:
                  <double complex *>&self.pyLnPsSpec[0],\
                  <double complex *>&self.pyDissSpec[0],\
                  <double complex *>&self.pyDmpProf[0],\
-                 <double complex *>&self.pyDiffProf[0]);
+                 <double complex *>&self.pyDiffProf[0])
         else:
             initialiseSpectralArrays(\
                  <double complex *>&self.pyVrtSpec[0,0], \
@@ -296,7 +296,7 @@ cdef class _gfs_dynamics:
                  <double complex *>&self.pyLnPsSpec[0],\
                  <double complex *>&self.pyDissSpec[0],\
                  <double complex *>&self.pyDmpProf[0],\
-                 <double complex *>&self.pyDiffProf[0]);
+                 <double complex *>&self.pyDiffProf[0])
 
 
 # Create the grid arrays (defined in grid_data.f90)
@@ -306,22 +306,22 @@ cdef class _gfs_dynamics:
 
 
         self.pyTracerg = np.zeros((nlons, nlats, nlevs, ntrac),\
-                dtype=np.double, order='F');
+                dtype=np.double, order='F')
 
-        self.pyUg = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F');
-        self.pyVg = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F');
-        self.pyVrtg = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F');
-        self.pyDivg = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F');
-        self.pyVirtTempg = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F');
-        self.pyDlnpdtg = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F');
-        self.pyEtaDotg = np.zeros((nlons, nlats, nlevs+1), dtype=np.double, order='F');
+        self.pyUg = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+        self.pyVg = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+        self.pyVrtg = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+        self.pyDivg = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+        self.pyVirtTempg = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+        self.pyDlnpdtg = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+        self.pyEtaDotg = np.zeros((nlons, nlats, nlevs+1), dtype=np.double, order='F')
 
 
-        self.pyLnPsg = np.zeros((nlons, nlats), dtype=np.double, order='F');
-        self.pyPhis = np.zeros((nlons, nlats), dtype=np.double, order='F');
-        self.pyDPhisdx = np.zeros((nlons, nlats), dtype=np.double, order='F');
-        self.pyDPhisdy = np.zeros((nlons, nlats), dtype=np.double, order='F');
-        self.pyDlnpsdt = np.zeros((nlons, nlats), dtype=np.double, order='F');
+        self.pyLnPsg = np.zeros((nlons, nlats), dtype=np.double, order='F')
+        self.pyPhis = np.zeros((nlons, nlats), dtype=np.double, order='F')
+        self.pyDPhisdx = np.zeros((nlons, nlats), dtype=np.double, order='F')
+        self.pyDPhisdy = np.zeros((nlons, nlats), dtype=np.double, order='F')
+        self.pyDlnpsdt = np.zeros((nlons, nlats), dtype=np.double, order='F')
 
         if(ntrac > 0):
             initialiseGridArrays(\
@@ -337,7 +337,7 @@ cdef class _gfs_dynamics:
                  <double *>&self.pyPhis[0,0],\
                  <double *>&self.pyDPhisdx[0,0],\
                  <double *>&self.pyDPhisdy[0,0],\
-                 <double *>&self.pyDlnpsdt[0,0]);
+                 <double *>&self.pyDlnpsdt[0,0])
         else:
             initialiseGridArrays(\
                  <double *>&self.pyUg[0,0,0],\
@@ -352,61 +352,61 @@ cdef class _gfs_dynamics:
                  <double *>&self.pyPhis[0,0],\
                  <double *>&self.pyDPhisdx[0,0],\
                  <double *>&self.pyDPhisdy[0,0],\
-                 <double *>&self.pyDlnpsdt[0,0]);
+                 <double *>&self.pyDlnpsdt[0,0])
 
 #Intialise pressure arrays
     def initPressureArrays(self):
         global adiabatic, dry, nlats, nlons, nlevs, ntrunc, ndimspec, ntrac
 
-        self.pySurfPressure = np.zeros((nlons, nlats), dtype=np.double, order='F');
-        self.pyPressGrid = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F');
+        self.pySurfPressure = np.zeros((nlons, nlats), dtype=np.double, order='F')
+        self.pyPressGrid = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
 
         initialisePressureArrays(\
                 <double *>&self.pySurfPressure[0,0],\
-                <double *>&self.pyPressGrid[0,0,0]);
+                <double *>&self.pyPressGrid[0,0,0])
 
 
 # Take one step
     
     def oneStepForward(self):
 
-        gfsTakeOneStep();
+        gfsTakeOneStep()
 
 # Register a callback which calculates the physics (to be used in stand-alone
 # mode only)
 
     def setPhysicsCallback(self,physicsFnPtr):
 
-        gfsRegisterPhysicsCallback(testFunc);
+        gfsRegisterPhysicsCallback(testFunc)
     '''
     Does not work!
     def setInitialConditions(self, inputList):
 
-        myug,myvg,myvirtempg,mytracerg,mylnpsg = inputList;
+        myug,myvg,myvirtempg,mytracerg,mylnpsg = inputList
 
-        self.pyUg[:] = myug[:];
-        self.pyVg[:] = myvg[:];
-        self.pyVirtTempg[:] = myvirtempg[:];
-        self.pyTracerg[:] = mytracerg[:];
-        self.pyLnPsg[:] = mylnpsg[:];
+        self.pyUg[:] = myug[:]
+        self.pyVg[:] = myvg[:]
+        self.pyVirtTempg[:] = myvirtempg[:]
+        self.pyTracerg[:] = mytracerg[:]
+        self.pyLnPsg[:] = mylnpsg[:]
 
-        gfsConvertToSpec();
+        gfsConvertToSpec()
     '''
     def getResult(self):
 
-        gfsConvertToGrid();
-        gfsCalcPressure();
+        gfsConvertToGrid()
+        gfsCalcPressure()
         
-        outputList = [];
+        outputList = []
 
-        outputList.append(np.asarray(self.pyUg).copy(order='F'));
-        outputList.append(np.asarray(self.pyVg).copy(order='F'));
-        outputList.append(np.asarray(self.pyVirtTempg).copy(order='F'));
-        outputList.append(np.asarray(self.pyTracerg[:,:,:,0]).copy(order='F'));
-        outputList.append(np.asarray(self.pyLnPsg).copy(order='F'));
-        outputList.append(np.asarray(self.pyPressGrid).copy(order='F'));
+        outputList.append(np.asarray(self.pyUg).copy(order='F'))
+        outputList.append(np.asarray(self.pyVg).copy(order='F'))
+        outputList.append(np.asarray(self.pyVirtTempg).copy(order='F'))
+        outputList.append(np.asarray(self.pyTracerg[:,:,:,0]).copy(order='F'))
+        outputList.append(np.asarray(self.pyLnPsg).copy(order='F'))
+        outputList.append(np.asarray(self.pyPressGrid).copy(order='F'))
 
-        return(outputList);
+        return(outputList)
 
 # method to override the parent class (Component) method (to be used in CliMT
 # mode only)
@@ -420,67 +420,81 @@ cdef class _gfs_dynamics:
 
         if(simTime >= 0):
             global t
-            t = simTime;
+            t = simTime
 
-#myug,myvg,myvirtempg,myqg,mylnpsg,mypress = inputArgs;
+#myug,myvg,myvirtempg,myqg,mylnpsg,mypress = inputArgs
 
-        myug = np.asfortranarray(myug);
-        myvg = np.asfortranarray(myvg);
-        myvirtempg = np.asfortranarray(myvirtempg);
-        myqg = np.asfortranarray(myqg);
-        mylnpsg = np.asfortranarray(mylnpsg);
+        myug = np.asfortranarray(myug)
+        myvg = np.asfortranarray(myvg)
+        myvirtempg = np.asfortranarray(myvirtempg)
+        myqg = np.asfortranarray(myqg)
+        mylnpsg = np.asfortranarray(mylnpsg)
 
 #Convert to memory view so that assignment can be made to arrays
-        tempug = myug;
-        tempvg = myvg;
-        tempvtg = myvirtempg;
+        tempug = myug
+        tempvg = myvg
+        tempvtg = myvirtempg
 
-        tempqg = myqg;
-        templnpsg = mylnpsg;
+        tempqg = myqg
+        templnpsg = mylnpsg
 
+        print np.amax(self.pyVirtTempg - myvirtempg)
 #Assign to model arrays
-        self.pyUg[:] = tempug;
-        self.pyVg[:] = tempvg;
-        self.pyVirtTempg[:] = tempvtg;
-        self.pyTracerg[:,:,:,0] = tempqg;
-        self.pyLnPsg[:] = templnpsg;
+        self.pyUg[:] = tempug
+        self.pyVg[:] = tempvg
+        self.pyVirtTempg[:] = tempvtg
+        self.pyTracerg[:,:,:,0] = tempqg
+        self.pyLnPsg[:] = templnpsg
 
 #Convert to spectral space
-        gfsConvertToSpec();
+        gfsConvertToSpec()
 
 #Step forward in time
-        self.oneStepForward();
+        self.oneStepForward()
 
 #Convert back to grid space
-        gfsConvertToGrid();
+        gfsConvertToGrid()
 
 # only ln(Ps) is calculated in the dynamics. This calculates
 # the values on the full grid
-        gfsCalcPressure();
+        gfsCalcPressure()
 
-        ugInc = self.pyUg - myug;
-        vgInc = self.pyVg - myvg;
-        virtempgInc = self.pyVirtTempg - myvirtempg;
-        tracergInc = self.pyTracerg[:,:,:,0] - myqg;
-        lnpsgInc = self.pyLnPsg - mylnpsg;
-        pressInc = self.pyPressGrid - mypress;
+        '''
+        ug = np.asfortranarray(self.pyUg.copy())
+        vg = np.asfortranarray(self.pyVg.copy())
+        virtempg = np.asfortranarray(self.pyVirtTempg.copy())
+        tracerg = np.asfortranarray(self.pyTracerg[:,:,:,0].copy())
+        lnpsg = np.asfortranarray(mylnpsg.copy())
+        press = np.asfortranarray(mypress.copy())
 
-        return(ugInc,vgInc,virtempgInc,tracergInc,lnpsgInc,pressInc);
+        return(ug,vg,virtempg,tracerg,lnpsg,press)
+        '''
 
+        ugInc = np.ascontiguousarray(self.pyUg - myug)
+        vgInc = np.ascontiguousarray(self.pyVg - myvg)
+        virtempgInc = np.ascontiguousarray(self.pyVirtTempg - myvirtempg)
+        tracergInc = np.ascontiguousarray(self.pyTracerg[:,:,:,0] - myqg)
+        lnpsgInc = np.ascontiguousarray(self.pyLnPsg - mylnpsg)
+        pressInc = np.ascontiguousarray(self.pyPressGrid - mypress)
+
+
+        return(ugInc,vgInc,virtempgInc,tracergInc,lnpsgInc,pressInc)
+        #return(ugInc,vgInc,virtempgInc,tracergInc,lnpsgInc,pressInc\
+               #,ug,vg,virtempg,tracerg,lnpsg,press)
     def printTimes(self):
-        global dt,t;
-        print 'Timestep: ',dt, 'Total Time:', t;
+        global dt,t
+        print 'Timestep: ',dt, 'Total Time:', t
 
     def get_nlat(self):
-        return self.numLats;
+        return self.numLats
 
     def get_nlon(self):
-        return self.numLons;
+        return self.numLons
 
     def get_nlev(self):
-        return self.numLevs;
+        return self.numLevs
 
 
     def shutDownModel(self):
 
-        gfsFinalise();    
+        gfsFinalise()    
