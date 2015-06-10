@@ -478,9 +478,11 @@ module dyn_init
    up = 1.
    pertrad = rerth/10.
    latc = 2.*pi/9.
-   xnh = sin(latc)*sin(lats) + cos(latc)*cos(lats)*cos(lons-lonc)
+   !xnh = sin(latc)*sin(lats) + cos(latc)*cos(lats)*cos(lons-lonc)
+   xnh = sin(latc)*sin(lats) + cos(latc)*cos(lats)
    latc = -2.*pi/9.
-   xsh = sin(latc)*sin(lats) + cos(latc)*cos(lats)*cos(lons-lonc)
+   !xsh = sin(latc)*sin(lats) + cos(latc)*cos(lats)*cos(lons-lonc)
+   xsh = sin(latc)*sin(lats) + cos(latc)*cos(lats)
    rnh = rerth*acos(xnh)
    rsh = rerth*acos(xsh)
    virtempg = 300.  ! isothermal state.
@@ -491,7 +493,7 @@ module dyn_init
    call calc_pressdata(lnpsg)
    do k=1,nlevs
       ! add a barotropic zonal wind perturbation (opp sign in each hemisphere)
-      ug(:,:,k) = up*(exp(-(rnh/pertrad)**2)-exp(-(rsh/pertrad)**2))
+      ug(:,:,k) = up*(exp(-(rnh/pertrad)**2)+exp(-(rsh/pertrad)**2))
       call getvrtdivspec(ug(:,:,k),vg(:,:,k),vrtspec(:,k),divspec(:,k),rerth)
       call grdtospec(virtempg(:,:,k),virtempspec(:,k))
    enddo
