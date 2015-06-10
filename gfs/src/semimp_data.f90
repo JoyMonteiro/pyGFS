@@ -71,21 +71,21 @@ module semimp_data
 ! ---------------------         ----------------------
 !        1/2 -1/2 1  0                3/8  0 3/8 1/4
 
- real(r_kind),parameter, public :: a21  = 1./3.
- real(r_kind),parameter, public :: a31  = 1./6.
- real(r_kind),parameter, public :: a32  = 1./2.
- real(r_kind),parameter, public :: aa21 = 1./6.
- real(r_kind),parameter, public :: aa22 = 1./6.
- real(r_kind),parameter, public :: aa31 = 1./3.
- real(r_kind),parameter, public :: aa32 = 0.
- real(r_kind),parameter, public :: aa33 = 1./3.
- real(r_kind),parameter, public :: b1   = 1./2.
- real(r_kind),parameter, public :: b2   = -1./2.
- real(r_kind),parameter, public :: b3   = 1.0 
- real(r_kind),parameter, public :: bb1  = 3./8.
- real(r_kind),parameter, public :: bb2  = 0.
- real(r_kind),parameter, public :: bb3  = 3./8.  
- real(r_kind),parameter, public :: bb4  = 1./4.
+! real(r_kind),parameter, public :: a21  = 1./3.
+! real(r_kind),parameter, public :: a31  = 1./6.
+! real(r_kind),parameter, public :: a32  = 1./2.
+! real(r_kind),parameter, public :: aa21 = 1./6.
+! real(r_kind),parameter, public :: aa22 = 1./6.
+! real(r_kind),parameter, public :: aa31 = 1./3.
+! real(r_kind),parameter, public :: aa32 = 0.
+! real(r_kind),parameter, public :: aa33 = 1./3.
+! real(r_kind),parameter, public :: b1   = 1./2.
+! real(r_kind),parameter, public :: b2   = -1./2.
+! real(r_kind),parameter, public :: b3   = 1.0 
+! real(r_kind),parameter, public :: bb1  = 3./8.
+! real(r_kind),parameter, public :: bb2  = 0.
+! real(r_kind),parameter, public :: bb3  = 3./8.  
+! real(r_kind),parameter, public :: bb4  = 1./4.
 
 ! ssp/tvd rk3 (shu 1988, http://epubs.siam.org/doi/abs/10.1137/0909073) IMEX
 ! minimizes spurious oscillations - good for advection of tracers
@@ -103,21 +103,21 @@ module semimp_data
 ! ---------------------         -------------------------------
 !        1/6 1/6 2/3 0                0.35   0.0   0.3    0.35
 !
- !real(r_kind),parameter, public :: a21  = 1.0
- !real(r_kind),parameter, public :: a31  = 0.25  
- !real(r_kind),parameter, public :: a32  = 0.25  
- !real(r_kind),parameter, public :: aa21 = 0.635
- !real(r_kind),parameter, public :: aa22 = 0.365
- !real(r_kind),parameter, public :: aa31 = 0.3175 
- !real(r_kind),parameter, public :: aa32 = 0.
- !real(r_kind),parameter, public :: aa33 = 0.1825  
- !real(r_kind),parameter, public :: b1   = 1./6.
- !real(r_kind),parameter, public :: b2   = 1./6.
- !real(r_kind),parameter, public :: b3   = 2./3.
- !real(r_kind),parameter, public :: bb1  = 0.35  
- !real(r_kind),parameter, public :: bb2  = 0.0
- !real(r_kind),parameter, public :: bb3  = 0.3    
- !real(r_kind),parameter, public :: bb4  = 0.35  
+ real(r_kind),parameter, public :: a21  = 1.0
+ real(r_kind),parameter, public :: a31  = 0.25  
+ real(r_kind),parameter, public :: a32  = 0.25  
+ real(r_kind),parameter, public :: aa21 = 0.635
+ real(r_kind),parameter, public :: aa22 = 0.365
+ real(r_kind),parameter, public :: aa31 = 0.3175 
+ real(r_kind),parameter, public :: aa32 = 0.
+ real(r_kind),parameter, public :: aa33 = 0.1825  
+ real(r_kind),parameter, public :: b1   = 1./6.
+ real(r_kind),parameter, public :: b2   = 1./6.
+ real(r_kind),parameter, public :: b3   = 2./3.
+ real(r_kind),parameter, public :: bb1  = 0.35  
+ real(r_kind),parameter, public :: bb2  = 0.0
+ real(r_kind),parameter, public :: bb3  = 0.3    
+ real(r_kind),parameter, public :: bb4  = 0.35  
 
  real(r_kind),parameter, public :: ref_temp = 300.
  real(r_kind),parameter, public :: ref_press = 800.e2
