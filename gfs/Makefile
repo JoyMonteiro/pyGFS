@@ -6,7 +6,7 @@ CYTHONOBJS= _gfs_dynamics.c\
 
 cython_wrapper: $(CYTHON) 
 	cd src; make python_lib
-	LDFLAGS="-L"$(PWD)\/src python setup.py build_ext --inplace
+	LDFLAGS="-L"$(PWD)\/src   python setup.py build_ext --inplace
 	if [ -d build ]; then rm -R build/; fi
 
 all: $(cython_wrapper)

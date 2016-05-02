@@ -55,7 +55,8 @@
       use kinds, only: r_kind, default_real, r_double
       implicit none 
       private 
-      public :: shtns_init,grdtospec,spectogrd,getuv,getvrtdivspec,getgrad,shtns_destroy
+      public :: shtns_init,grdtospec,spectogrd,getuv,getvrtdivspec,&
+                getgrad,shtns_destroy,get_latitudes
       public :: gauwts, lats, lons, nlm, degree, order, lap, invlap,&
                 current_nlon, current_nlat, current_ntrunc, areawts
       INTEGER, PARAMETER :: SHT_NATIVE_LAYOUT=0
@@ -80,12 +81,25 @@
       INTEGER            :: nlm
 ! arrays allocated when nlon or nlat or ntrunc change.
       REAL(r_kind), DIMENSION(:), ALLOCATABLE :: lap, invlap, gauwts
-      REAL(r_kind), DIMENSION(:,:), ALLOCATABLE :: lats, lons, areawts
+      REAL(r_kind), DIMENSION(:,:), ALLOCATABLE :: lats
+      REAL(r_kind), DIMENSION(:,:), ALLOCATABLE :: lons, areawts
       INTEGER, DIMENSION(:), ALLOCATABLE :: degree, order
       real(r_double) :: popt ! polar optimization thresh
       integer :: nth ! number of threads to use
 
       contains
+
+      subroutine get_latitudes(latitudes) bind(c,name='get_latitudes')
+
+      real(r_double), intent(out), dimension(current_nlon,current_nlat) :: latitudes
+
+      if(allocated(lats)) then
+          latitudes(:,:) = lats(:,:)
+      else
+          print *, 'not allocated'
+      endif
+
+      end subroutine get_latitudes
 
       subroutine shtns_init(nlon,nlat,ntrunc,nthreads,polar_opt)
 ! initialize library, allocate arrays.

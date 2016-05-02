@@ -24,7 +24,7 @@ nug2,nvg2,nvtg2,ntrg2,npsg2,npg2 = \
 
 #Should be very close to zero
 print 'udiff: ', np.amax(abs(nug+nug2-nug1));
-print 'gdiff: ', np.amax(abs(nvg+nvg2-nvg1));
+print 'vdiff: ', np.amax(abs(nvg+nvg2-nvg1));
 print 'pdiff: ', np.amax(abs(npg+npg2-npg1));
 print 'vtdiff: ', np.amax(abs(nvtg+nvtg2-nvtg1));
 

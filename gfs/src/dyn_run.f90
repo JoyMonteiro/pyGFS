@@ -31,6 +31,31 @@
             gfsConvertToGrid, gfsConvertToSpec
 
  contains
+
+!JOY adding subroutine to convert u,v grids to vrt,div grids
+subroutine gfs_uv_to_vrtdiv(ug,vg,vrtg,divg) bind(c,name='gfs_uv_to_vrtdiv')
+
+    real(r_kind), dimension(nlons,nlats,nlevs), intent(in) :: ug, vg
+    real(r_kind), dimension(nlons,nlats,nlevs), intent(out) :: vrtg, divg
+    complex(r_kind), dimension(:,:), allocatable :: vrtspec, divspec
+    integer k
+
+    allocate(vrtspec(ndimspec,nlevs),divspec(ndimspec,nlevs))
+!$omp parallel do private(k)
+    do k=1,nlevs
+    
+        call getvrtdivspec(ug(:,:,k),vg(:,:,k),vrtspec(:,k),divspec(:,k),rerth);
+        call spectogrd(vrtspec(:,k),vrtg(:,:,k))
+        call spectogrd(divspec(:,k),divg(:,:,k))
+    enddo
+
+!$omp end parallel do 
+
+
+    deallocate(vrtspec,divspec)
+
+    end subroutine gfs_uv_to_vrtdiv
+
 !JOY adding wrapper functions to convert to and from spectral/grid arrays
  subroutine gfsConvertToGrid() bind(c,name='gfsConvertToGrid')
 
@@ -141,7 +166,7 @@
 !$omp parallel do private(k,nt) schedule(dynamic)
    do k=1,nlevs
       call getuv(vrtspec(:,k),divspec(:,k),ug(:,:,k),vg(:,:,k),rerth)
-      call spectogrd(vrtspec(:,k),vrtg(:,:,k))
+      call spectogrd(divspec(:,k),vrtg(:,:,k))
       call spectogrd(divspec(:,k),divg(:,:,k))
       call spectogrd(virtempspec(:,k),virtempg(:,:,k))
       ! gradient of virtual temperature on grid.

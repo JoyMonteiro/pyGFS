@@ -41,7 +41,10 @@ cdef extern:
 
 # Typedef for function pointer returning void and taking no arguments (for now)
 
-ctypedef void (*pyPhysicsCallback)()
+ctypedef void (*pyPhysicsCallback)(double *, double *, double *, double *,\
+                                   double *, double *, double *,\
+                              double *, double *, double *, double *,\
+                                   double *, double *, double *)
 
 # Variables for grid sizes from the library
 cdef extern:
@@ -64,10 +67,14 @@ cdef extern:
 cdef extern:
     double pdryini
 
+
 # Function definitions to do our work
 cdef extern:
     void gfsReadNamelist()
 
+#Function to get latitude map from shtns
+cdef extern:
+    void get_latitudes(double *latitudes)
 # Function to init dynamics
 cdef extern:
     void gfsInitDynamics()
@@ -87,6 +94,40 @@ cdef extern:
 #Function to register an external callback
 cdef extern:
     void gfsRegisterPhysicsCallback(pyPhysicsCallback callback)
+
+#Function to add u,v tendency to vrt,div tendency
+cdef extern:
+    void gfs_uv_to_vrtdiv(\
+                          double *pyUg,\
+                          double *pyVg,\
+                          double *pyVrtg,\
+                          double *pyDivg)
+
+#Function to calculate tendencies within the fortran code (For testing)
+cdef extern:
+    void calculate_tendencies(\
+                              double *pyVrtg,\
+                              double *pyDivg,\
+                              double *pyVirtTempg,\
+                              double *pyPressGrid,\
+                              double *pySurfPressure,\
+                              double *pyTracerg,\
+                              double t,\
+                              double dt)
+
+#Function to set tendencies within the fortran code, which will be called by the 
+# dynamical core after the semi-implicit step
+cdef extern:
+    void set_tendencies(\
+                              double *pyVrtTend,\
+                              double *pyDivTend,\
+                              double *pyVirtTempTend,\
+                              double *pyTracerTend,\
+                              double *pyLnpsTend,\
+                              double t,\
+                              double dt)
+
+
 
 #Function to deallocate arrays in physics, etc.,
 
@@ -158,24 +199,35 @@ cdef class _gfs_dynamics:
 
 # Spectral arrays, using cython for declaration
     cdef public cnp.complex_t[::1,:,:] pyTracerSpec
+
     cdef public cnp.complex_t[::1,:] pyVrtSpec, pyDivSpec, pyVirtTempSpec
+    
     cdef public cnp.complex_t[:] pyTopoSpec, pyLnPsSpec, \
                 pyDissSpec, pyDmpProf, pyDiffProf
+
+# Temporary arrays for setting tendency terms
+    cdef public cnp.double_t[::1,:,:] \
+        tempVrtTend, tempDivTend, tempVirtTempTend, tempUTend,tempVTend
+    cdef public cnp.double_t[::1,:,:,:] tempTracerTend
+    cdef public cnp.double_t[::1,:] tempLnpsTend, latitudes
 
 # Grid size
     cdef public int numLats, numLons, numTrunc, numLevs, spectralDim, numTracers
 
 # Model state
-    cdef int modelIsInitialised
+    cdef int modelIsInitialised, physicsEnabled
+
+# Physics subroutine pointer
+    cdef object physicsCallback
 
     def __init__(self, numLons=192, numLats=94, \
                     simTimeHours=24, timestep=1200.0,\
                     useHeldSuarez=True, dryPressure=1e5,\
-                    numTracers=1):
+                    numTracers=1,physics=None):
 
         global adiabatic, dry, nlats, nlons, nlevs,\
             ntrunc, ndimspec, ntrac, fhmax, deltim,\
-            heldsuarez, dt, pdryini, fhout
+            heldsuarez, dt, pdryini, fhout, lats
 # Read in the namelist
 #        gfsReadNamelist()
 
@@ -193,6 +245,9 @@ cdef class _gfs_dynamics:
             deltim = <double>timestep
             dt = <double>timestep
 
+        if(physics):
+            self.physicsCallback = physics
+            self.physicsEnabled = True
 
         nlevs = 28
         pdryini = <double> dryPressure
@@ -252,6 +307,10 @@ cdef class _gfs_dynamics:
 
         gfsInitDynamics()
         gfsInitPhysics()
+        print 'getting latitudes'
+        get_latitudes(<double *>&self.latitudes[0,0])
+        print 'got latitudes'
+
         self.modelIsInitialised = 1
 
 # Create the spectral arrays (defined in spectral_data.f90)
@@ -263,8 +322,7 @@ cdef class _gfs_dynamics:
 
 #self.pyVrtSpec = np.zeros((ndimspec, nlevs),dtype=complex, order='F')
         self.pyVrtSpec = np.array(np.arange(ndimspec*nlevs).reshape(ndimspec, nlevs),dtype=complex, order='F')
-        self.pyVirtTempSpec = np.zeros((ndimspec, nlevs),dtype=complex, \
-                order='F')
+        self.pyVirtTempSpec = np.zeros((ndimspec, nlevs),dtype=complex, order='F')
         self.pyDivSpec = np.zeros((ndimspec, nlevs),dtype=complex,order='F')
 
         
@@ -323,6 +381,22 @@ cdef class _gfs_dynamics:
         self.pyDPhisdy = np.zeros((nlons, nlats), dtype=np.double, order='F')
         self.pyDlnpsdt = np.zeros((nlons, nlats), dtype=np.double, order='F')
 
+
+        self.tempTracerTend = np.zeros((nlons, nlats, nlevs, ntrac),\
+                dtype=np.double, order='F')
+
+        self.tempUTend = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+        self.tempVTend = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+        self.tempVrtTend = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+
+        self.tempDivTend = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+        self.tempVirtTempTend = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+
+        self.tempLnpsTend = np.zeros((nlons, nlats), dtype=np.double, order='F')
+
+        self.latitudes = np.zeros((nlons, nlats), dtype=np.double, order='F')
+
+
         if(ntrac > 0):
             initialiseGridArrays(\
                  <double *>&self.pyUg[0,0,0],\
@@ -369,15 +443,86 @@ cdef class _gfs_dynamics:
 # Take one step
     
     def oneStepForward(self):
+        
+        cdef cnp.double_t[::1,:,:] tempvrt,tempdiv,tempvt,tempu,tempv
+        cdef cnp.double_t[::1,:,:,:] temptracer
+        cdef cnp.double_t[::1,:] templnps
 
+        gfsConvertToGrid()
+        gfsCalcPressure()
+        if(self.physicsEnabled):
+            
+            print 'calling physics'
+            uTend,vTend,virtTempTend,lnpsTend,tracerTend = \
+                self.physicsCallback(self.pyUg,\
+                                     self.pyVg,\
+                                     self.pyVirtTempg,\
+                                     self.pyPressGrid,\
+                                     self.pySurfPressure,\
+                                     self.pyTracerg,\
+                                     self.latitudes)
+
+
+            tempvt = np.asfortranarray(virtTempTend)
+            templnps = np.asfortranarray(lnpsTend)
+            temptracer = np.asfortranarray(tracerTend)
+
+            if (uTend.any() and vTend.any()):
+
+                print
+                print
+                print 'adding wind tendencies'
+
+                tempu = np.asfortranarray(uTend)
+                tempv = np.asfortranarray(vTend)
+                self.tempUTend[:] = tempu
+                self.tempVTend[:] = tempv
+
+                gfs_uv_to_vrtdiv(\
+                                 <double *>&self.tempUTend[0,0,0],\
+                                 <double *>&self.tempVTend[0,0,0],\
+                                 <double *>&self.tempVrtTend[0,0,0],\
+                                 <double *>&self.tempDivTend[0,0,0],\
+                                 )
+
+                #tempvrt = np.asfortranarray(self.tempVrtTend) + np.asfortranarray(tempvrt) 
+                #tempdiv = np.asfortranarray(self.tempDivTend) + np.asfortranarray(tempdiv)
+
+
+            #self.tempVrtTend[:] = tempvrt
+            #self.tempDivTend[:] = tempdiv
+            self.tempVirtTempTend[:] = tempvt
+            self.tempLnpsTend[:] = templnps
+            self.tempTracerTend[:] = temptracer
+
+            set_tendencies(\
+                           <double *>&self.tempVrtTend[0,0,0],\
+                           <double *>&self.tempDivTend[0,0,0],\
+                           <double *>&self.tempVirtTempTend[0,0,0],\
+                           <double *>&self.tempLnpsTend[0,0],\
+                           <double *>&self.tempTracerTend[0,0,0,0],\
+                           t,dt)
+
+        else:
+            calculate_tendencies(\
+                             <double *>&self.pyVrtg[0,0,0],\
+                             <double *>&self.pyDivg[0,0,0],\
+                             <double *>&self.pyVirtTempg[0,0,0],\
+                             <double *>&self.pyPressGrid[0,0,0],\
+                             <double *>&self.pySurfPressure[0,0],\
+                             <double *>0,\
+                             t,\
+                             dt)
         gfsTakeOneStep()
 
 # Register a callback which calculates the physics (to be used in stand-alone
 # mode only)
 
-    def setPhysicsCallback(self,physicsFnPtr):
+    cdef setPhysicsCallback(self, physicsFnPtr):
 
-        gfsRegisterPhysicsCallback(testFunc)
+        self.physicsCallback = physicsFnPtr
+        self.physicsEnabled = True
+#        gfsRegisterPhysicsCallback(testFunc)
     '''
     Does not work!
     def setInitialConditions(self, inputList):
