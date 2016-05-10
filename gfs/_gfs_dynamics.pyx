@@ -455,14 +455,14 @@ cdef class _gfs_dynamics:
         cdef cnp.double_t[::1,:] templnps
 
         uTend,vTend,virtTempTend,lnpsTend,tracerTend = tendency_list
-
+        '''
         if virtTempTend is None:
             tempvt = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
         else:
             tempvt = np.asfortranarray(virtTempTend)
 
         if lnpsTend is None:
-            tempvt = np.zeros((nlons, nlats), dtype=np.double, order='F')
+            templnps = np.zeros((nlons, nlats), dtype=np.double, order='F')
         else:
             templnps = np.asfortranarray(lnpsTend)
 
@@ -480,13 +480,24 @@ cdef class _gfs_dynamics:
             tempv = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
         else:
             tempv = np.asfortranarray(vTend)
+        '''
+
+        tempvt = np.asfortranarray(virtTempTend)
+
+        templnps = np.asfortranarray(lnpsTend)
+
+        temptracer = np.asfortranarray(tracerTend)
+
+        tempu = np.asfortranarray(uTend)
+
+        tempv = np.asfortranarray(vTend)
 
 
         #if (uTend.any() and vTend.any()):
 
-        #print
-        #print 'adding wind tendencies'
-        #print
+        print
+        print 'adding wind tendencies'
+        print
 
         tempu = np.asfortranarray(uTend)
         tempv = np.asfortranarray(vTend)
@@ -688,16 +699,24 @@ cdef class _gfs_dynamics:
         if self.climt_mode:
             
             temptrac = np.zeros((nlons,nlats,nlevs,ntrac),dtype=np.double,order='F')
-            uTend,vTend,virtTempTend,lnpsTend,qTend = increment_list
+            uTend,vTend,virtTempTend,qTend,lnpsTend = increment_list
+            
+            #print
+            #print uTend.shape,vTend.shape,virtTempTend.shape,lnpsTend.shape,qTend.shape
+            #print
     
     
             u,v,virtemp,q,lnps = field_list
     
             #CliMT gives increments; convert to tendencies
             uTend /= dt
+
             vTend /= dt
+
             virtTempTend /= dt
+
             qTend /= dt
+
             lnpsTend /= dt
     
             temptrac[:,:,:,0] = qTend
