@@ -2,21 +2,19 @@ from _gfs_dynamics import _gfs_dynamics
 
 import numpy as np
 
-def test(u, v, vrt, div, temp, press, surf_press, tracer,lats):
+def test_phys(u, v, temp, press, surf_press, tracer,lats):
 
-    print np.asarray(lats)
-    print lats.shape
+    #print np.asarray(lats)
+    #print lats.shape
 
     print 'in physics'
-    vrt_tend = np.zeros(vrt.shape, dtype=np.double, order='F')
-    div_tend = np.zeros(div.shape, dtype=np.double, order='F')
+    u_tend = np.zeros(u.shape, dtype=np.double, order='F')
+    v_tend = np.zeros(v.shape, dtype=np.double, order='F')
     temp_tend = np.zeros(temp.shape, dtype=np.double, order='F')
     lnps_tend = np.zeros(surf_press.shape, dtype=np.double, order='F')
     tracer_tend = np.zeros(tracer.shape, dtype=np.double, order='F')
-    u_tend = None
-    v_tend = None
 
-    return (u_tend,v_tend,vrt_tend,div_tend,temp_tend,lnps_tend,tracer_tend)
+    return (u_tend,v_tend,temp_tend,lnps_tend,tracer_tend)
 
 def held_suarez(u, v, temp, press, surf_press, tracer,lats):
 
@@ -76,7 +74,7 @@ test.initModel();
 
 #test.initModel();
 print 'finished init'
-for i in range(1000):
+for i in range(400):
     test.oneStepForward();
 
 
