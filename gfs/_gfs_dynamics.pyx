@@ -220,10 +220,13 @@ cdef class _gfs_dynamics:
 # Physics subroutine pointer
     cdef object physicsCallback
 
+# Are we running inside CliMT?
+    cdef int climt_mode
+
     def __init__(self, numLons=192, numLats=94, \
                     simTimeHours=24, timestep=1200.0,\
                     useHeldSuarez=True, dryPressure=1e5,\
-                    numTracers=1,physics=None):
+                    numTracers=1,physics=None,climt_mode=False):
 
         global adiabatic, dry, nlats, nlons, nlevs,\
             ntrunc, ndimspec, ntrac, fhmax, deltim,\
@@ -248,6 +251,9 @@ cdef class _gfs_dynamics:
         if(physics):
             self.physicsCallback = physics
             self.physicsEnabled = True
+
+        self.climt_mode = climt_mode
+
 
         nlevs = 28
         pdryini = <double> dryPressure
@@ -439,21 +445,91 @@ cdef class _gfs_dynamics:
                 <double *>&self.pySurfPressure[0,0],\
                 <double *>&self.pyPressGrid[0,0,0])
 
+# Set tendencies for dynamical core to use in physics
+    def setTendencies(self,tendency_list):
 
-# Take one step
-    
-    def oneStepForward(self):
-        
+        global nlons,nlats,nlevs,ntrac
+
         cdef cnp.double_t[::1,:,:] tempvrt,tempdiv,tempvt,tempu,tempv
         cdef cnp.double_t[::1,:,:,:] temptracer
         cdef cnp.double_t[::1,:] templnps
 
+        uTend,vTend,virtTempTend,lnpsTend,tracerTend = tendency_list
+
+        if virtTempTend is None:
+            tempvt = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+        else:
+            tempvt = np.asfortranarray(virtTempTend)
+
+        if lnpsTend is None:
+            tempvt = np.zeros((nlons, nlats), dtype=np.double, order='F')
+        else:
+            templnps = np.asfortranarray(lnpsTend)
+
+        if tracerTend is None:
+            temptracer = np.zeros((nlons, nlats, nlevs, ntrac), dtype=np.double, order='F')
+        else:
+            temptracer = np.asfortranarray(tracerTend)
+
+        if uTend is None:
+            tempu = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+        else:
+            tempu = np.asfortranarray(uTend)
+
+        if vTend is None:
+            tempv = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+        else:
+            tempv = np.asfortranarray(vTend)
+
+
+        #if (uTend.any() and vTend.any()):
+
+        #print
+        #print 'adding wind tendencies'
+        #print
+
+        tempu = np.asfortranarray(uTend)
+        tempv = np.asfortranarray(vTend)
+        self.tempUTend[:] = tempu
+        self.tempVTend[:] = tempv
+
+        gfs_uv_to_vrtdiv(\
+                         <double *>&self.tempUTend[0,0,0],\
+                         <double *>&self.tempVTend[0,0,0],\
+                         <double *>&self.tempVrtTend[0,0,0],\
+                         <double *>&self.tempDivTend[0,0,0],\
+                         )
+
+            #tempvrt = np.asfortranarray(self.tempVrtTend) + np.asfortranarray(tempvrt) 
+            #tempdiv = np.asfortranarray(self.tempDivTend) + np.asfortranarray(tempdiv)
+
+
+            #self.tempVrtTend[:] = tempvrt
+            #self.tempDivTend[:] = tempdiv
+        self.tempVirtTempTend[:] = tempvt
+        self.tempLnpsTend[:] = templnps
+        self.tempTracerTend[:] = temptracer
+
+        set_tendencies(\
+                       <double *>&self.tempVrtTend[0,0,0],\
+                       <double *>&self.tempDivTend[0,0,0],\
+                       <double *>&self.tempVirtTempTend[0,0,0],\
+                       <double *>&self.tempLnpsTend[0,0],\
+                       <double *>&self.tempTracerTend[0,0,0,0],\
+                       t,dt)
+
+# Take one step
+    def oneStepForward(self):
+
         gfsConvertToGrid()
         gfsCalcPressure()
-        if(self.physicsEnabled):
-            
-            print 'calling physics'
-            uTend,vTend,virtTempTend,lnpsTend,tracerTend = \
+
+
+        if self.physicsEnabled:
+            #TODO don't call physics callback directly. use a helper function which will remove
+            #TODO individual fields from tracerg and assign them to q, ozone, etc., and then
+            #TODO call physics routines
+            tendList = \
                 self.physicsCallback(self.pyUg,\
                                      self.pyVg,\
                                      self.pyVirtTempg,\
@@ -462,57 +538,18 @@ cdef class _gfs_dynamics:
                                      self.pyTracerg,\
                                      self.latitudes)
 
-
-            tempvt = np.asfortranarray(virtTempTend)
-            templnps = np.asfortranarray(lnpsTend)
-            temptracer = np.asfortranarray(tracerTend)
-
-            if (uTend.any() and vTend.any()):
-
-                print
-                print
-                print 'adding wind tendencies'
-
-                tempu = np.asfortranarray(uTend)
-                tempv = np.asfortranarray(vTend)
-                self.tempUTend[:] = tempu
-                self.tempVTend[:] = tempv
-
-                gfs_uv_to_vrtdiv(\
-                                 <double *>&self.tempUTend[0,0,0],\
-                                 <double *>&self.tempVTend[0,0,0],\
-                                 <double *>&self.tempVrtTend[0,0,0],\
-                                 <double *>&self.tempDivTend[0,0,0],\
-                                 )
-
-                #tempvrt = np.asfortranarray(self.tempVrtTend) + np.asfortranarray(tempvrt) 
-                #tempdiv = np.asfortranarray(self.tempDivTend) + np.asfortranarray(tempdiv)
-
-
-            #self.tempVrtTend[:] = tempvrt
-            #self.tempDivTend[:] = tempdiv
-            self.tempVirtTempTend[:] = tempvt
-            self.tempLnpsTend[:] = templnps
-            self.tempTracerTend[:] = temptracer
-
-            set_tendencies(\
-                           <double *>&self.tempVrtTend[0,0,0],\
-                           <double *>&self.tempDivTend[0,0,0],\
-                           <double *>&self.tempVirtTempTend[0,0,0],\
-                           <double *>&self.tempLnpsTend[0,0],\
-                           <double *>&self.tempTracerTend[0,0,0,0],\
-                           t,dt)
+            self.setTendencies(tendList)
 
         else:
             calculate_tendencies(\
-                             <double *>&self.pyVrtg[0,0,0],\
-                             <double *>&self.pyDivg[0,0,0],\
-                             <double *>&self.pyVirtTempg[0,0,0],\
-                             <double *>&self.pyPressGrid[0,0,0],\
-                             <double *>&self.pySurfPressure[0,0],\
-                             <double *>0,\
-                             t,\
-                             dt)
+                                 <double *>&self.pyVrtg[0,0,0],\
+                                 <double *>&self.pyDivg[0,0,0],\
+                                 <double *>&self.pyVirtTempg[0,0,0],\
+                                 <double *>&self.pyPressGrid[0,0,0],\
+                                 <double *>&self.pySurfPressure[0,0],\
+                                 <double *>0,\
+                                 t,\
+                                 dt)
         gfsTakeOneStep()
 
 # Register a callback which calculates the physics (to be used in stand-alone
@@ -526,22 +563,22 @@ cdef class _gfs_dynamics:
     '''
     Does not work!
     def setInitialConditions(self, inputList):
-
-        myug,myvg,myvirtempg,mytracerg,mylnpsg = inputList
-
-        self.pyUg[:] = myug[:]
-        self.pyVg[:] = myvg[:]
-        self.pyVirtTempg[:] = myvirtempg[:]
-        self.pyTracerg[:] = mytracerg[:]
-        self.pyLnPsg[:] = mylnpsg[:]
-
-        gfsConvertToSpec()
+    
+    myug,myvg,myvirtempg,mytracerg,mylnpsg = inputList
+    
+    self.pyUg[:] = myug[:]
+    self.pyVg[:] = myvg[:]
+    self.pyVirtTempg[:] = myvirtempg[:]
+    self.pyTracerg[:] = mytracerg[:]
+    self.pyLnPsg[:] = mylnpsg[:]
+    
+    gfsConvertToSpec()
     '''
     def getResult(self):
-
+    
         gfsConvertToGrid()
         gfsCalcPressure()
-        
+
         outputList = []
 
         outputList.append(np.asarray(self.pyUg).copy(order='F'))
@@ -553,57 +590,57 @@ cdef class _gfs_dynamics:
 
         return(outputList)
 
-# method to override the parent class (Component) method (to be used in CliMT
-# mode only)
+    # method to override the parent class (Component) method (to be used in CliMT
+    # mode only)
     def driver(self, myug, myvg, myvirtempg, myqg, mylnpsg, mypress, double simTime=-1.):
-       
-        
+
+
         cdef cnp.double_t[::1,:,:] tempug,tempvg,tempvtg
         cdef cnp.double_t[::1,:,:] tempqg
         cdef cnp.double_t[::1,:] templnpsg
-
-
+    
+    
         if(simTime >= 0):
             global t
             t = simTime
-
-#myug,myvg,myvirtempg,myqg,mylnpsg,mypress = inputArgs
-
+    
+        #myug,myvg,myvirtempg,myqg,mylnpsg,mypress = inputArgs
+    
         myug = np.asfortranarray(myug)
         myvg = np.asfortranarray(myvg)
         myvirtempg = np.asfortranarray(myvirtempg)
         myqg = np.asfortranarray(myqg)
         mylnpsg = np.asfortranarray(mylnpsg)
-
-#Convert to memory view so that assignment can be made to arrays
+    
+        #Convert to memory view so that assignment can be made to arrays
         tempug = myug
         tempvg = myvg
         tempvtg = myvirtempg
-
+    
         tempqg = myqg
         templnpsg = mylnpsg
-
+    
         print np.amax(self.pyVirtTempg - myvirtempg)
-#Assign to model arrays
+        #Assign to model arrays
         self.pyUg[:] = tempug
         self.pyVg[:] = tempvg
         self.pyVirtTempg[:] = tempvtg
         self.pyTracerg[:,:,:,0] = tempqg
         self.pyLnPsg[:] = templnpsg
-
-#Convert to spectral space
+    
+    #Convert to spectral space
         gfsConvertToSpec()
-
-#Step forward in time
+    
+    #Step forward in time
         self.oneStepForward()
-
-#Convert back to grid space
+    
+    #Convert back to grid space
         gfsConvertToGrid()
-
-# only ln(Ps) is calculated in the dynamics. This calculates
-# the values on the full grid
+    
+    # only ln(Ps) is calculated in the dynamics. This calculates
+    # the values on the full grid
         gfsCalcPressure()
-
+    
         '''
         ug = np.asfortranarray(self.pyUg.copy())
         vg = np.asfortranarray(self.pyVg.copy())
@@ -611,35 +648,112 @@ cdef class _gfs_dynamics:
         tracerg = np.asfortranarray(self.pyTracerg[:,:,:,0].copy())
         lnpsg = np.asfortranarray(mylnpsg.copy())
         press = np.asfortranarray(mypress.copy())
-
+    
         return(ug,vg,virtempg,tracerg,lnpsg,press)
         '''
-
+    
         ugInc = np.ascontiguousarray(self.pyUg - myug)
         vgInc = np.ascontiguousarray(self.pyVg - myvg)
         virtempgInc = np.ascontiguousarray(self.pyVirtTempg - myvirtempg)
         tracergInc = np.ascontiguousarray(self.pyTracerg[:,:,:,0] - myqg)
         lnpsgInc = np.ascontiguousarray(self.pyLnPsg - mylnpsg)
         pressInc = np.ascontiguousarray(self.pyPressGrid - mypress)
-
-
+    
+    
         return(ugInc,vgInc,virtempgInc,tracergInc,lnpsgInc,pressInc)
         #return(ugInc,vgInc,virtempgInc,tracergInc,lnpsgInc,pressInc\
                #,ug,vg,virtempg,tracerg,lnpsg,press)
+    
     def printTimes(self):
         global dt,t
         print 'Timestep: ',dt, 'Total Time:', t
-
+    
     def get_nlat(self):
         return self.numLats
-
+    
     def get_nlon(self):
         return self.numLons
-
+    
     def get_nlev(self):
         return self.numLevs
-
-
+    
+    def integrateFields(self,field_list,increment_list):
+        #Only to be used in CLIMT mode
+        global ntrac,nlons,nlats,nlevs,dt
+     
+        cdef cnp.double_t[::1,:,:] tempug,tempvg,tempvtg
+        cdef cnp.double_t[::1,:,:] tempqg
+        cdef cnp.double_t[::1,:] templnpsg
+       
+        if self.climt_mode:
+            
+            temptrac = np.zeros((nlons,nlats,nlevs,ntrac),dtype=np.double,order='F')
+            uTend,vTend,virtTempTend,lnpsTend,qTend = increment_list
+    
+    
+            u,v,virtemp,q,lnps = field_list
+    
+            #CliMT gives increments; convert to tendencies
+            uTend /= dt
+            vTend /= dt
+            virtTempTend /= dt
+            qTend /= dt
+            lnpsTend /= dt
+    
+            temptrac[:,:,:,0] = qTend
+    
+            increment_list = uTend,vTend,virtTempTend,lnpsTend,temptrac
+            self.setTendencies(increment_list)
+    
+            myug = np.asfortranarray(u)
+            myvg = np.asfortranarray(v)
+            myvirtempg = np.asfortranarray(virtemp)
+            myqg = np.asfortranarray(q)
+            mylnpsg = np.asfortranarray(lnps)
+    
+            #Convert to memory view so that assignment can be made to arrays
+            tempug = myug
+            tempvg = myvg
+            tempvtg = myvirtempg
+    
+            tempqg = myqg
+            templnpsg = mylnpsg
+    
+            #Assign to model arrays
+            self.pyUg[:] = tempug
+            self.pyVg[:] = tempvg
+            self.pyVirtTempg[:] = tempvtg
+            self.pyTracerg[:,:,:,0] = tempqg
+            self.pyLnPsg[:] = templnpsg
+    
+            #Convert to spectral space
+            gfsConvertToSpec()
+    
+            #Step forward in time
+            gfsTakeOneStep()
+    
+            #Convert back to grid space
+            gfsConvertToGrid()
+    
+            # only ln(Ps) is calculated in the dynamics. This calculates
+            # the values on the full grid
+            gfsCalcPressure()
+    
+            ug = np.asfortranarray(self.pyUg.copy())
+            vg = np.asfortranarray(self.pyVg.copy())
+            virtempg = np.asfortranarray(self.pyVirtTempg.copy())
+            qg = np.asfortranarray(self.pyTracerg[:,:,:,0].copy())
+            lnpsg = np.asfortranarray(self.pyLnPsg.copy())
+            press = np.asfortranarray(self.pyPressGrid.copy())
+    
+            return(ug,vg,virtempg,qg,lnpsg,press)
+            
+    
     def shutDownModel(self):
 
-        gfsFinalise()    
+        global t
+    
+        if self.modelIsInitialised:
+            t = 0
+            gfsFinalise()
+            self.modelIsInitialised = False
