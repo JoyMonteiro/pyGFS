@@ -79,4 +79,4 @@ for i in range(400):
 
 
 fields = test.getResult()
-test.shutDownModel();
+#test.shutDownModel();

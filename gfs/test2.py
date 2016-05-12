@@ -28,4 +28,4 @@ print 'vdiff: ', np.amax(abs(nvg+nvg2-nvg1));
 print 'pdiff: ', np.amax(abs(npg+npg2-npg1));
 print 'vtdiff: ', np.amax(abs(nvtg+nvtg2-nvtg1));
 
-test.shutDownModel();
+#test.shutDownModel();
