@@ -16,4 +16,4 @@ for i in range(20000):
 
 
 fields = test.getResult()
-test.shutDownModel();
+#test.shutDownModel();

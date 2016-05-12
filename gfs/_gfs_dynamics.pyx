@@ -776,3 +776,7 @@ cdef class _gfs_dynamics:
             t = 0
             gfsFinalise()
             self.modelIsInitialised = False
+
+    def __dealloc__(self):
+
+        self.shutDownModel()
