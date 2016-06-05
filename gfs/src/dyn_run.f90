@@ -28,7 +28,7 @@
  private
 
  public :: getdyntend, getomega, getpresgrad, getvadv, dry_mass_fixer,&
-            gfsConvertToGrid, gfsConvertToSpec
+            gfsConvertToGrid, gfsConvertToSpec, gfs_uv_to_vrtdiv
 
  contains
 
@@ -45,6 +45,12 @@ subroutine gfs_uv_to_vrtdiv(ug,vg,vrtg,divg) bind(c,name='gfs_uv_to_vrtdiv')
     do k=1,nlevs
     
         call getvrtdivspec(ug(:,:,k),vg(:,:,k),vrtspec(:,k),divspec(:,k),rerth);
+    enddo
+
+!$omp end parallel do 
+!$omp parallel do private(k)
+    do k=1,nlevs
+    
         call spectogrd(vrtspec(:,k),vrtg(:,:,k))
         call spectogrd(divspec(:,k),divg(:,:,k))
     enddo
@@ -52,9 +58,10 @@ subroutine gfs_uv_to_vrtdiv(ug,vg,vrtg,divg) bind(c,name='gfs_uv_to_vrtdiv')
 !$omp end parallel do 
 
 
+
     deallocate(vrtspec,divspec)
 
-    end subroutine gfs_uv_to_vrtdiv
+end subroutine gfs_uv_to_vrtdiv
 
 !JOY adding wrapper functions to convert to and from spectral/grid arrays
  subroutine gfsConvertToGrid() bind(c,name='gfsConvertToGrid')
@@ -82,15 +89,15 @@ subroutine gfs_uv_to_vrtdiv(ug,vg,vrtg,divg) bind(c,name='gfs_uv_to_vrtdiv')
 !$omp parallel do private(k,i) schedule(dynamic)
     do k=1,nlevs
     
-        call getvrtdivspec(ug(:,:,k),vg(:,:,k),vrtspec(:,k),divspec(:,k),rerth);
+        call getvrtdivspec(ug(:,:,k),vg(:,:,k),vrtspec(:,k),divspec(:,k),rerth)
         call grdtospec(virtempg(:,:,k),virtempspec(:,k))
-        call grdtospec(lnpsg,lnpsspec)
 
         do i=1,ntrac
             call grdtospec(tracerg(:,:,k,i),tracerspec(:,k,i))
         enddo
     enddo
 !$omp end parallel do 
+    call grdtospec(lnpsg,lnpsspec)
 
  end subroutine
 
@@ -166,7 +173,7 @@ subroutine gfs_uv_to_vrtdiv(ug,vg,vrtg,divg) bind(c,name='gfs_uv_to_vrtdiv')
 !$omp parallel do private(k,nt) schedule(dynamic)
    do k=1,nlevs
       call getuv(vrtspec(:,k),divspec(:,k),ug(:,:,k),vg(:,:,k),rerth)
-      call spectogrd(divspec(:,k),vrtg(:,:,k))
+      call spectogrd(vrtspec(:,k),vrtg(:,:,k))
       call spectogrd(divspec(:,k),divg(:,:,k))
       call spectogrd(virtempspec(:,k),virtempg(:,:,k))
       ! gradient of virtual temperature on grid.
@@ -216,7 +223,7 @@ subroutine gfs_uv_to_vrtdiv(ug,vg,vrtg,divg) bind(c,name='gfs_uv_to_vrtdiv')
          print *,'pdryini = ',pdryini
       else
          !print *, "SUM OF PSG: ", sum(psg);
-         print *,'pdry = ',pdry
+         !print *,'pdry = ',pdry
       endif
    endif
 
@@ -687,10 +694,10 @@ subroutine gfs_uv_to_vrtdiv(ug,vg,vrtg,divg) bind(c,name='gfs_uv_to_vrtdiv')
       complex(r_kind) workspec(ndimspec)
 ! compute global mean dry ps.
       pwatg = sum(areawts*pwat)
-      print *,'global mean pwat = ',pwatg
+      !print *,'global mean pwat = ',pwatg
       pmean = sum(areawts*psg)
       pdry = pmean - grav*pwatg
-      print *,'pdry after physics update',pdry
+      !print *,'pdry after physics update',pdry
 ! implied ps correction needed to return dry mass to initial value
       pcorr = (pdryini + grav*pwatg)/pmean
 ! apply correction as a multiplication to provisional value of ps so as
