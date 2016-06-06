@@ -53,8 +53,10 @@ subroutine takeOneStep() bind(c,name='gfsTakeOneStep')
     spdmax = maxval(sqrt(ug**2+vg**2)) ! max wind speed
     pstend = (36.*psg*dlnpsdt)**2 ! ps tend variance (mb/hr)**2
     pstendmean = sqrt(sum(pstend*areawts))
-    write(6,8998) fh,spdmax,minval(psg/100.),maxval(psg/100.),pstendmean,t2-t1
-    8998 format('t = ',f0.3,' hrs, spdmax = ',f7.3,', min/max ps = ',f7.2,'/',f7.2,', pstend = ',f0.3,', cpu time = ',f0.3)
+    if (modulo(fh, 10.) .eq. 0.) then
+        write(6,8998) fh,spdmax,minval(psg/100.),maxval(psg/100.),pstendmean,t2-t1
+        8998 format('t = ',f0.3,' hrs, spdmax = ',f7.3,', min/max ps = ',f7.2,'/',f7.2,', pstend = ',f0.3,', cpu time = ',f0.3)
+    endif
 
 
 end subroutine takeOneStep

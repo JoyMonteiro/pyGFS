@@ -33,33 +33,33 @@
  contains
 
 !JOY adding subroutine to convert u,v grids to vrt,div grids
-subroutine gfs_uv_to_vrtdiv(ug,vg,vrtg,divg) bind(c,name='gfs_uv_to_vrtdiv')
+subroutine gfs_uv_to_vrtdiv(ug1,vg1,vrtg1,divg1) bind(c,name='gfs_uv_to_vrtdiv')
 
-    real(r_kind), dimension(nlons,nlats,nlevs), intent(in) :: ug, vg
-    real(r_kind), dimension(nlons,nlats,nlevs), intent(out) :: vrtg, divg
-    complex(r_kind), dimension(:,:), allocatable :: vrtspec, divspec
+    real(r_kind), dimension(nlons,nlats,nlevs), intent(in) :: ug1, vg1
+    real(r_kind), dimension(nlons,nlats,nlevs), intent(out) :: vrtg1, divg1
+    complex(r_kind), dimension(:,:), allocatable :: vrtspec1, divspec1
     integer k
 
-    allocate(vrtspec(ndimspec,nlevs),divspec(ndimspec,nlevs))
+    allocate(vrtspec1(ndimspec,nlevs),divspec1(ndimspec,nlevs))
 !$omp parallel do private(k)
     do k=1,nlevs
     
-        call getvrtdivspec(ug(:,:,k),vg(:,:,k),vrtspec(:,k),divspec(:,k),rerth);
+        call getvrtdivspec(ug1(:,:,k),vg1(:,:,k),vrtspec1(:,k),divspec1(:,k),rerth);
     enddo
 
 !$omp end parallel do 
 !$omp parallel do private(k)
     do k=1,nlevs
     
-        call spectogrd(vrtspec(:,k),vrtg(:,:,k))
-        call spectogrd(divspec(:,k),divg(:,:,k))
+        call spectogrd(vrtspec1(:,k),vrtg1(:,:,k))
+        call spectogrd(divspec1(:,k),divg1(:,:,k))
     enddo
 
 !$omp end parallel do 
 
 
 
-    deallocate(vrtspec,divspec)
+    deallocate(vrtspec1,divspec1)
 
 end subroutine gfs_uv_to_vrtdiv
 

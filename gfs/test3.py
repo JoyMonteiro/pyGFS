@@ -16,7 +16,15 @@ def test_phys(u, v, temp, press, surf_press, tracer,lats):
 
     return (u_tend,v_tend,temp_tend,lnps_tend,tracer_tend)
 
+blprof = 0
+rad_equil_temp = 0
+temp_tend = 0
+u_tend = 0
+v_tend = 0
+
 def held_suarez(u, v, temp, press, surf_press, tracer,lats):
+
+    global blprof, rad_equil_temp, temp_tend, u_tend, v_tend
 
     sigbot = 0.7
     delthz = 10.
@@ -64,9 +72,11 @@ def held_suarez(u, v, temp, press, surf_press, tracer,lats):
 
 
 #test = _gfs_dynamics(384,190);
-test = _gfs_dynamics(192,94,physics=held_suarez);
+#dycore = _gfs_dynamics(192,94,physics=held_suarez)
+#dycore = _gfs_dynamics(64,30)
+dycore = _gfs_dynamics(64,30,physics=held_suarez)
 
-test.initModel();
+dycore.initModel();
 
 #test.oneStepForward();
 
@@ -74,9 +84,9 @@ test.initModel();
 
 #test.initModel();
 print 'finished init'
-for i in range(400):
-    test.oneStepForward();
+for i in range(30000):
+    dycore.oneStepForward()
 
 
-fields = test.getResult()
-#test.shutDownModel();
+fields = dycore.getResult()
+dycore.shutDownModel();

@@ -128,8 +128,8 @@
      !$omp end parallel do 
      spectral_lnps_tend = 0.
 
-     print *, 'Maximum tendency in divergence: '
-     print *, maxval(forcingg)
+     !print *, 'Maximum tendency in divergence: '
+     !print *, maxval(forcingg)
 
      deallocate(blprof,radequiltemp)
      deallocate(forcingg,forcingspec)
@@ -150,6 +150,8 @@ subroutine set_tendencies(dvrtgdt,ddivgdt,dvirtempgdt,dlnpsgdt,dtracergdt) bind(
 
     !allocate(forcingspec(ndimspec,nlevs))
 
+    !print *, 'In phy_run: '
+    !print *, maxval(abs(dvrtgdt(:,:,9))), maxval(abs(ddivgdt)), maxval(abs(dvirtempgdt(:,:,9)))
     !$omp parallel do private(k)
     do k=1,nlevs
     call grdtospec(dvrtgdt(:,:,k), spectral_vort_tend(:,k))
