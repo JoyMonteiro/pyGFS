@@ -820,14 +820,14 @@ cdef class _gfs_dynamics:
 
             #Step forward in time
             self.take_one_step()
-            
+ 
             #Convert back to grid space
             self.convert_to_grid()
-            
+ 
             # only ln(Ps) is calculated in the dynamics. This calculates
             # the values on the full grid
             self.calculate_pressure()
-    
+ 
             ug = np.asfortranarray(self.pyUg.copy())
             vg = np.asfortranarray(self.pyVg.copy())
             virtempg = np.asfortranarray(self.pyVirtTempg.copy())
@@ -839,7 +839,7 @@ cdef class _gfs_dynamics:
             #psg.max()
             return(ug,vg,virtempg,qg,psg,press)
             
-   
+ 
     def take_one_step(self):
         gfsTakeOneStep()
 
