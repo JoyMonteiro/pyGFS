@@ -56,7 +56,7 @@
       implicit none 
       private 
       public :: shtns_init,grdtospec,spectogrd,getuv,getvrtdivspec,&
-                getgrad,shtns_destroy,get_latitudes
+                getgrad,shtns_destroy,get_lon_lat
       public :: gauwts, lats, lons, nlm, degree, order, lap, invlap,&
                 current_nlon, current_nlat, current_ntrunc, areawts
       INTEGER, PARAMETER :: SHT_NATIVE_LAYOUT=0
@@ -89,17 +89,25 @@
 
       contains
 
-      subroutine get_latitudes(latitudes) bind(c,name='get_latitudes')
+      subroutine get_lon_lat(longitudes, latitudes) &
+              bind(c,name='get_lon_lat')
 
-      real(r_double), intent(out), dimension(current_nlon,current_nlat) :: latitudes
+      real(r_double), intent(out), dimension(current_nlon,current_nlat)&
+                :: longitudes, latitudes
 
       if(allocated(lats)) then
           latitudes(:,:) = lats(:,:)
       else
-          print *, 'not allocated'
+          print *, 'latitudes not allocated'
       endif
 
-      end subroutine get_latitudes
+      if(allocated(lons)) then
+          longitudes(:,:) = lons(:,:)
+      else
+          print *, 'longitudes not allocated'
+      endif
+
+      end subroutine get_lon_lat
 
       subroutine shtns_init(nlon,nlat,ntrunc,nthreads,polar_opt)
 ! initialize library, allocate arrays.
@@ -197,6 +205,7 @@
       nlon = size(datagrid,1)
       nlat = size(datagrid,2)
       ntrunc = nint((-1.+sqrt(1+8*float(size(dataspec))))/2.)-1
+
       if (nlon .ne. current_nlon .or. &
           nlat .ne. current_nlat .or. &
           ntrunc .ne. current_ntrunc) then
