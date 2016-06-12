@@ -67,14 +67,14 @@ cdef extern:
 cdef extern:
     double pdryini
 
-
 # Function definitions to do our work
 cdef extern:
     void gfsReadNamelist()
 
-#Function to get latitude map from shtns
+#Function to get longitude/latitude map from shtns
 cdef extern:
-    void get_latitudes(double *latitudes)
+    void get_lon_lat(double *longitudes, double *latitudes)
+
 # Function to init dynamics
 cdef extern:
     void gfsInitDynamics()
@@ -128,7 +128,8 @@ cdef extern:
                               double dt)
 
 
-
+cdef extern:
+    void gfsSetTopography(double *surface_geopotential)
 #Function to deallocate arrays in physics, etc.,
 
 cdef extern:
@@ -205,11 +206,14 @@ cdef class _gfs_dynamics:
     cdef public cnp.complex_t[:] pyTopoSpec, pyLnPsSpec, \
                 pyDissSpec, pyDmpProf, pyDiffProf
 
+# Arrays for storing lon/lat
+    cdef public cnp.ndarray longitudes, latitudes
+
 # Temporary arrays for setting tendency terms
-    cdef public cnp.double_t[::1,:,:] \
+    cdef cnp.double_t[::1,:,:] \
         tempVrtTend, tempDivTend, tempVirtTempTend, tempUTend,tempVTend
-    cdef public cnp.double_t[::1,:,:,:] tempTracerTend
-    cdef public cnp.double_t[::1,:] tempLnpsTend, latitudes
+    cdef cnp.double_t[::1,:,:,:] tempTracerTend
+    cdef cnp.double_t[::1,:] tempLnpsTend, __latitudes, __longitudes
 
 # Grid size
     cdef public int numLats, numLons, numTrunc, numLevs, spectralDim, numTracers
@@ -302,6 +306,7 @@ cdef class _gfs_dynamics:
 # Initialise arrays and dynamics and physics
     def initModel(self):
 
+
         if(self.modelIsInitialised):
             self.shutDownModel()
 
@@ -313,9 +318,9 @@ cdef class _gfs_dynamics:
 
         gfsInitDynamics()
         gfsInitPhysics()
-        print 'getting latitudes'
-        get_latitudes(<double *>&self.latitudes[0,0])
-        print 'got latitudes'
+        get_lon_lat(<double *>&self.__longitudes[0,0], <double *>&self.__latitudes[0,0])
+        self.longitudes = np.asfortranarray(self.__longitudes)
+        self.latitudes = np.asfortranarray(self.__latitudes)
 
         self.modelIsInitialised = 1
 
@@ -399,7 +404,8 @@ cdef class _gfs_dynamics:
 
         self.tempLnpsTend = np.zeros((nlons, nlats), dtype=np.double, order='F')
 
-        self.latitudes = np.zeros((nlons, nlats), dtype=np.double, order='F')
+        self.__latitudes = np.zeros((nlons, nlats), dtype=np.double, order='F')
+        self.__longitudes = np.zeros((nlons, nlats), dtype=np.double, order='F')
 
 
         if(ntrac > 0):
@@ -553,7 +559,7 @@ cdef class _gfs_dynamics:
                                      self.pyPressGrid,\
                                      self.pySurfPressure,\
                                      self.pyTracerg,\
-                                     self.latitudes)
+                                     self.__latitudes)
 
             self.setTendencies(tendList)
 
@@ -697,7 +703,7 @@ cdef class _gfs_dynamics:
     def get_nlev(self):
         return self.numLevs
 
-    def make_spectral(self, ug, vg, virtempg, psg):
+    def initial_conditions(self, ug, vg, virtempg, psg):
             #Only to be used in CLIMT mode
         global ntrac,nlons,nlats,nlevs,dt
      
@@ -848,6 +854,17 @@ cdef class _gfs_dynamics:
 
     def calculate_pressure(self):
         gfsCalcPressure()
+
+    def set_topography(self, topography):
+        cdef cnp.double_t[::1,:] temp_topo
+
+        topography = np.asfortranarray(topography)
+
+        temp_topo = topography
+
+        self.pyPhis[:] = temp_topo[:]
+
+        gfsSetTopography(<double *>&self.pyPhis[0,0])
 
     def shutDownModel(self):
 
