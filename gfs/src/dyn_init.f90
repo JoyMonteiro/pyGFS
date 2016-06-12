@@ -43,6 +43,16 @@ module dyn_init
  public :: init_dyn
 
  contains
+ !JOY subroutine to set topography from arbitrary array
+ subroutine set_topography(surf_geop) bind(c, name='gfsSetTopography')
+
+    real(r_kind), intent(in), dimension(nlons,nlats) :: surf_geop
+
+    call grdtospec(surf_geop/grav, topospec)
+    call spectogrd(grav*topospec, phis)
+    call getgrad(grav*topospec, dphisdx, dphisdy, rerth)
+
+ end subroutine set_topography
 
  subroutine init_dyn() bind(c, name='gfsInitDynamics')
     integer k
