@@ -30,49 +30,90 @@ module pressure_data
 ! prs which is bottom to top.
  real(r_kind), dimension(:), allocatable :: ak,bk,ck,dbk,si,sl,bkl
 ! real(r_kind), dimension(:,:), allocatable :: psg
- real(r_kind), dimension(:,:,:), allocatable :: pk,alfa,rlnp,dpk
-!JOY converted prs and psg to pointer, memory allocated by python
+ real(r_kind), dimension(:,:,:), allocatable :: alfa,rlnp,dpk
+!JOY converted prs, pk and psg to pointer, memory allocated by python
  real(r_kind), dimension(:,:,:), pointer :: prs => null()
+ real(r_kind), dimension(:,:,:), pointer :: pk => null()
  real(r_kind), dimension(:,:), pointer :: psg => null()
  
  contains
 
- subroutine assignPressureArrays(pySurfPressure, pyPressGrid) bind(c, name='initialisePressureArrays')
+ subroutine assignPressureArrays(pySurfPressure, pyPressGrid, pyInterfacePressure) bind(c, name='initialisePressureArrays')
 
     real(r_kind), intent(inout), target :: pyPressGrid(nlons,nlats,nlevs)
+    real(r_kind), intent(inout), target :: pyInterfacePressure(nlons,nlats,nlevs)
     real(r_kind), intent(inout), target :: pySurfPressure(nlons,nlats)
 
     print *, 'Initialising pressure arrays'
 
     prs => pyPressGrid
     psg => pySurfPressure
+    pk => pyInterfacePressure
 
 end subroutine assignPressureArrays
 
  subroutine init_pressdata()
+    if allocated(ak) then
+        deallocate(ak)
+    endif
     allocate(ak(nlevs+1))
+
+    if allocated(bk) then
+        deallocate(bk)
+    endif
     allocate(bk(nlevs+1))
+
+    if allocated(si) then
+        deallocate(si)
+    endif
     allocate(si(nlevs+1))
+
+    if allocated(sl) then
+        deallocate(sl)
+    endif
     allocate(sl(nlevs))
+
+    if allocated(ck) then
+        deallocate(ck)
+    endif
     allocate(ck(nlevs))
+
+    if allocated(dbk) then
+        deallocate(dbk)
+    endif
     allocate(dbk(nlevs))
+
+    if allocated(bkl) then
+        deallocate(bkl)
+    endif
     allocate(bkl(nlevs))
     !JOY allocated in python
     !allocate(psg(nlons,nlats))
+    if allocated(alfa) then
+        deallocate(alfa)
+    endif
     allocate(alfa(nlons,nlats,nlevs))
+
+    if allocated(rlnp) then
+        deallocate(rlnp)
+    endif
     allocate(rlnp(nlons,nlats,nlevs))
+
+    if allocated(dpk) then
+        deallocate(dpk)
+    endif
     allocate(dpk(nlons,nlats,nlevs))
-    allocate(pk(nlons,nlats,nlevs+1))
     !JOY allocated in python
+   ! allocate(pk(nlons,nlats,nlevs+1))
    ! allocate(prs(nlons,nlats,nlevs))
  end subroutine init_pressdata
 
  subroutine destroy_pressdata()
     print *, 'Deallocating pressure data'
     deallocate(ak,bk,ck,dbk,si,sl,bkl)
-    deallocate(alfa,rlnp,dpk,pk)
+    deallocate(alfa,rlnp,dpk)
     !JOY these are just pointers, no deallocation needed
-    nullify(prs,psg)
+    nullify(prs,psg,pk)
  end subroutine destroy_pressdata
 
  subroutine updatePressure() bind(c, name='gfsCalcPressure')

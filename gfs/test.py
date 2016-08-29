@@ -11,7 +11,7 @@ test.initModel();
 
 #test.initModel();
 
-for i in range(20000):
+for i in range(200):
     test.oneStepForward();
 
 

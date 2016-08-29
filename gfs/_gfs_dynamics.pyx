@@ -2,42 +2,6 @@ cimport numpy as cnp
 import numpy as np
 from numpy import empty
 
-#ctypedef cnp.ndarray[complex, ndim=3] Cplx3d
-#ctypedef cnp.ndarray[complex, ndim=2] Cplx2d
-#ctypedef cnp.ndarray[complex, ndim=1] Cplx1d
-
-#ctypedef cnp.ndarray[double, ndim=4] Real4d
-#ctypedef cnp.ndarray[double, ndim=3] Real3d
-#ctypedef cnp.ndarray[double, ndim=2] Real2d
-'''
-cdef extern: 
-    void initialiseSpectralArrays(\
-        cnp.ndarray[complex, ndim=2] *pyVrtSpec, \
-        cnp.ndarray[complex, ndim=2] *pyDivSpec,\
-        cnp.ndarray[complex, ndim=3] *pyTracerSpec,\
-        cnp.ndarray[complex, ndim=2] *pyVirtTempSpec,\
-        cnp.ndarray[complex, ndim=1] *pyTopoSpec,\
-        cnp.ndarray[complex, ndim=1] *pyLnPsSpec,\
-        cnp.ndarray[complex, ndim=1] *pyDissSpec,\
-        cnp.ndarray[complex, ndim=1] *pyDmpProf,\
-        cnp.ndarray[complex, ndim=1] *pyDiffProf)
-
-cdef extern: 
-    void initialiseGridArrays(\
-        cnp.ndarray[double, ndim=3] pyUg,\
-        cnp.ndarray[double, ndim=3] pyVg,\
-        cnp.ndarray[double, ndim=3] pyVrtg,\
-        cnp.ndarray[double, ndim=3] pyDivg,\
-        cnp.ndarray[double, ndim=3] pyVirtTempg,\
-        cnp.ndarray[double, ndim=4] pyTracerg,\
-        cnp.ndarray[double, ndim=3] pyDlnpdtg,\
-        cnp.ndarray[double, ndim=3] pyEtaDotg,\
-        cnp.ndarray[double, ndim=2] pyLnPsg,\
-        cnp.ndarray[double, ndim=2] pyPhis,\
-        cnp.ndarray[double, ndim=2] pyDPhisdx,\
-        cnp.ndarray[double, ndim=2] pyDPhisdy,\
-        cnp.ndarray[double, ndim=2] pyDlnpsdt)
-'''
 
 # Typedef for function pointer returning void and taking no arguments (for now)
 
@@ -178,7 +142,8 @@ cdef extern:
 cdef extern:
     void initialisePressureArrays(\
         double *pySurfPressure,\
-        double *pyPressGrid)
+        double *pyPressGrid,\
+        double *pyInterfacePressure)
 
 cdef void testFunc():
     print 'a'
@@ -196,6 +161,7 @@ cdef class _gfs_dynamics:
 # Pressure arrays, in grid space
     cdef public cnp.double_t[::1,:] pySurfPressure
     cdef public cnp.double_t[::1,:,:] pyPressGrid
+    cdef public cnp.double_t[::1,:,:] pyInterfacePressure
 
 
 # Spectral arrays, using cython for declaration
@@ -445,10 +411,12 @@ cdef class _gfs_dynamics:
 
         self.pySurfPressure = np.zeros((nlons, nlats), dtype=np.double, order='F')
         self.pyPressGrid = np.zeros((nlons, nlats, nlevs), dtype=np.double, order='F')
+        self.pyInterfacePressure = np.zeros((nlons, nlats, nlevs+1), dtype=np.double, order='F')
 
         initialisePressureArrays(\
                 <double *>&self.pySurfPressure[0,0],\
-                <double *>&self.pyPressGrid[0,0,0])
+                <double *>&self.pyPressGrid[0,0,0],\
+                <double *>&self.pyInterfacePressure[0,0,0])
 
 # Set tendencies for dynamical core to use in physics
     def setTendencies(self,tendency_list):
@@ -610,6 +578,7 @@ cdef class _gfs_dynamics:
         outputList.append(np.asarray(self.pyTracerg[:,:,:,0]).copy(order='F'))
         outputList.append(np.asarray(self.pySurfPressure).copy(order='F'))
         outputList.append(np.asarray(self.pyPressGrid).copy(order='F'))
+        outputList.append(np.asarray(self.pyInterfacePressure).copy(order='F'))
 
         return(outputList)
 
@@ -741,9 +710,6 @@ cdef class _gfs_dynamics:
         #Only to be used in CLIMT mode
         global ntrac,nlons,nlats,nlevs,dt
  
-        #cdef cnp.double_t[::1,:,:] tempug,tempvg,tempvtg
-        #cdef cnp.double_t[::1,:,:] tempqg
-        #cdef cnp.double_t[::1,:] templnpsg
        
         if self.climt_mode:
             
@@ -758,9 +724,7 @@ cdef class _gfs_dynamics:
     
     
             u,v,virtemp,q,ps = field_list
-            #self.make_spectral(u,v,virtemp,ps)
 
-            #print 'In gfs: u,v,theta,q,lnps: ', u.max(), v.max(), virtemp.max(), q.max(), lnps.max()
     
             #CliMT gives increments; convert to tendencies
             uTend /= dt
@@ -775,54 +739,9 @@ cdef class _gfs_dynamics:
     
             temptrac[:,:,:,0] = qTend
     
-            #print 'In gfs: ut,vt,thetat,qt,lnpst: ', abs(uTend[:,:,8]).max(), abs(vTend).max(),\
-            #abs(virtTempTend[:,:,8]).max(),\
-            #            abs(qTend).max(), abs(lnpsTend).max()
             increment_list = uTend,vTend,virtTempTend,lnpsTend,temptrac
             self.setTendencies(increment_list)
  
-            '''
-            myug = np.asfortranarray(u)
-            myvg = np.asfortranarray(v)
-            myvirtempg = np.asfortranarray(virtemp)
-            myqg = np.asfortranarray(q)
-            #Convert to ln(ps)
-            mylnpsg = np.asfortranarray(np.log(ps))
-    
-            #Obtain memory view so that assignment can be made to model arrays
-            tempug = myug
-            tempvg = myvg
-            tempvtg = myvirtempg
-    
-            tempqg = myqg
-            templnpsg = mylnpsg
-   
-            #Assign to model arrays
-            #print np.amax(np.abs(myug - self.pyUg))
-            #self.pyUg[:] = tempug[:]
-            #self.pyVg[:] = tempvg[:]
-            #self.pyVirtTempg[:] = tempvtg[:]
-            #self.pyTracerg[:,:,:,0] = tempqg
-            #self.pyLnPsg[:] = templnpsg[:]
-            #self.tempUTend[:] = tempug
-            #self.tempVTend[:] = tempvg
-    
-            #gfs_uv_to_vrtdiv(\
-            #             <double *>&self.tempUTend[0,0,0],\
-            #             <double *>&self.tempVTend[0,0,0],\
-            #             <double *>&self.tempVrtTend[0,0,0],\
-            #             <double *>&self.tempDivTend[0,0,0],\
-            #             )
-
-
-            #print 'Vrt Diff in,out = ', np.amax(np.asfortranarray(self.tempVrtTend) - self.pyVrtg)
-            #print 'Max vrt, in, out = ', np.amax(self.tempVrtTend), np.amax(self.pyVrtg)
-            #print
-            #print 'Div Diff in,out = ', np.amax(np.asfortranarray(self.tempDivTend) - self.pyDivg)
-            #print 'Max div, in, out = ', np.amax(self.tempDivTend), np.amax(self.pyDivg)
-            #Convert to spectral space
-            gfsConvertToSpec()
-            '''
 
             #Step forward in time
             self.take_one_step()
@@ -840,10 +759,9 @@ cdef class _gfs_dynamics:
             qg = np.asfortranarray(self.pyTracerg[:,:,:,0].copy())
             psg = np.asfortranarray(self.pySurfPressure.copy())
             press = np.asfortranarray(self.pyPressGrid.copy())
+            iface_press = np.asfortranarray(self.pyInterfacePressure[:,:,::-1].copy())
     
-            #print 'In gfs: un,vn,thetan,qn,psn: ', ug.max(), vg.max(), virtempg.max(), qg.max(),\
-            #psg.max()
-            return(ug,vg,virtempg,qg,psg,press)
+            return(ug,vg,virtempg,qg,psg,press,iface_press)
             
  
     def take_one_step(self):
