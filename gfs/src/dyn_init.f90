@@ -79,7 +79,7 @@ module dyn_init
     psg = 1000.*exp(psg) ! convert to Pa
     call grdtospec(log(psg), lnpsspec) ! back to spectral.
     !JOY adding read from namelist to eliminate using sigio to read ak,bk
-    ak = (/ 0.00000000,566.898010,1290.53296,2210.97900&
+    ak = (/ 200.00000000,566.898010,1290.53296,2210.97900&
     ,3376.51611,4844.03613,6678.60791,8913.76660,&
     11343.6543,13671.4268,15613.5645,16912.1309,&
     17364.6582,16959.9941,15812.9258,14089.5352,&

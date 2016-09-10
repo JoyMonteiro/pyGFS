@@ -84,7 +84,7 @@ dycore.initModel();
 
 #test.initModel();
 print 'finished init'
-for i in range(30000):
+for i in range(3000):
     dycore.oneStepForward()
 
 

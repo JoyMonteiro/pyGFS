@@ -165,11 +165,11 @@ cdef class _gfs_dynamics:
 
 
 # Spectral arrays, using cython for declaration
-    cdef public cnp.complex_t[::1,:,:] pyTracerSpec
+    cdef public cnp.complex128_t[::1,:,:] pyTracerSpec
 
-    cdef public cnp.complex_t[::1,:] pyVrtSpec, pyDivSpec, pyVirtTempSpec
+    cdef public cnp.complex128_t[::1,:] pyVrtSpec, pyDivSpec, pyVirtTempSpec
     
-    cdef public cnp.complex_t[:] pyTopoSpec, pyLnPsSpec, \
+    cdef public cnp.complex128_t[:] pyTopoSpec, pyLnPsSpec, \
                 pyDissSpec, pyDmpProf, pyDiffProf
 
 # Arrays for storing lon/lat
@@ -192,6 +192,9 @@ cdef class _gfs_dynamics:
 
 # Are we running inside CliMT?
     cdef int climt_mode
+
+#TODO get constant from physcons.f90
+    cdef double fv
 
     def __init__(self, numLons=192, numLats=94, \
                     simTimeHours=24, timestep=1200.0,\
@@ -224,6 +227,7 @@ cdef class _gfs_dynamics:
 
         self.climt_mode = climt_mode
 
+        self.fv = (4.6150e+2/2.8705e+2) - 1
 
         nlevs = 28
         pdryini = <double> dryPressure
@@ -572,13 +576,23 @@ cdef class _gfs_dynamics:
 
         outputList = []
 
+        theta = np.asfortranarray(self.pyVirtTempg)
+        q = np.asfortranarray(self.pyTracerg[:,:,:,0])
+        q[q<0] = 0
+
+        temp = theta.copy()
+        if(np.any(q > 0)):
+            temp = theta/(1+self.fv*q)
+
         outputList.append(np.asarray(self.pyUg).copy(order='F'))
         outputList.append(np.asarray(self.pyVg).copy(order='F'))
-        outputList.append(np.asarray(self.pyVirtTempg).copy(order='F'))
-        outputList.append(np.asarray(self.pyTracerg[:,:,:,0]).copy(order='F'))
+        outputList.append(temp)
+        outputList.append(q)
         outputList.append(np.asarray(self.pySurfPressure).copy(order='F'))
         outputList.append(np.asarray(self.pyPressGrid).copy(order='F'))
-        outputList.append(np.asarray(self.pyInterfacePressure).copy(order='F'))
+        iface_press = np.zeros(np.asarray(self.pyInterfacePressure).shape, dtype=np.double, order='F')
+        iface_press[:] = np.asfortranarray(self.pyInterfacePressure)[:,:,::-1]
+        outputList.append(iface_press)
 
         return(outputList)
 
@@ -672,7 +686,7 @@ cdef class _gfs_dynamics:
     def get_nlev(self):
         return self.numLevs
 
-    def initial_conditions(self, ug, vg, virtempg, psg):
+    def initial_conditions(self, ug, vg, virtempg, psg, qg=None):
             #Only to be used in CLIMT mode
         global ntrac,nlons,nlats,nlevs,dt
      
@@ -685,6 +699,10 @@ cdef class _gfs_dynamics:
         myvirtempg = np.asfortranarray(virtempg)
         #Convert to ln(ps)
         mylnpsg = np.asfortranarray(np.log(psg))
+        myqg = np.asfortranarray(np.zeros(ug.shape))
+        if qg is not None:
+            myqg = np.asfortranarray(qg)
+
 
         #Obtain memory view so that assignment can be made to model arrays
         tempug = myug
@@ -692,13 +710,14 @@ cdef class _gfs_dynamics:
         tempvtg = myvirtempg
 
         templnpsg = mylnpsg
+        tempqg = myqg
 
         #Assign to model arrays
         #print np.amax(np.abs(myug - self.pyUg))
         self.pyUg[:] = tempug[:]
         self.pyVg[:] = tempvg[:]
         self.pyVirtTempg[:] = tempvtg[:]
-        #self.pyTracerg[:,:,:,0] = tempqg
+        self.pyTracerg[:,:,:,0] = tempqg
         self.pyLnPsg[:] = templnpsg[:]
         #self.tempUTend[:] = tempug
         #self.tempVTend[:] = tempvg
@@ -712,10 +731,17 @@ cdef class _gfs_dynamics:
  
        
         if self.climt_mode:
+
+            q = np.asfortranarray(self.pyTracerg[:,:,:,0])
+            q[q<0] = 0
             
             temptrac = np.zeros((nlons,nlats,nlevs,ntrac),dtype=np.double,order='F')
-            uTend,vTend,virtTempTend,qTend,psTend = increment_list
+            uTend,vTend, tempTend,qTend,psTend = increment_list
  
+            virtTempTend = tempTend
+            if(np.any(q > 0)):
+                virtTempTend = tempTend*(1+self.fv*q)
+
             psTend[psTend==0] = 1.
             lnpsTend = np.log(psTend)
             #print
@@ -759,8 +785,15 @@ cdef class _gfs_dynamics:
             qg = np.asfortranarray(self.pyTracerg[:,:,:,0].copy())
             psg = np.asfortranarray(self.pySurfPressure.copy())
             press = np.asfortranarray(self.pyPressGrid.copy())
-            iface_press = np.asfortranarray(self.pyInterfacePressure[:,:,::-1].copy())
-    
+            iface_press = np.zeros(np.array(self.pyInterfacePressure).shape, dtype=np.double, order='F')
+            iface_press[:] = np.asfortranarray(self.pyInterfacePressure.copy())[:,:,::-1]
+
+            qg[qg<0] = 0
+
+            if(np.any(qg > 0)):
+                #output temperature, not virtual temp
+                virtempg = virtempg/(1+self.fv*qg)
+
             return(ug,vg,virtempg,qg,psg,press,iface_press)
             
  

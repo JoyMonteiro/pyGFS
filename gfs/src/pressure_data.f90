@@ -52,54 +52,55 @@ module pressure_data
 
 end subroutine assignPressureArrays
 
- subroutine init_pressdata()
-    if allocated(ak) then
+subroutine init_pressdata()
+
+    if (allocated(ak)) then
         deallocate(ak)
     endif
     allocate(ak(nlevs+1))
 
-    if allocated(bk) then
+    if (allocated(bk)) then
         deallocate(bk)
     endif
     allocate(bk(nlevs+1))
 
-    if allocated(si) then
+    if (allocated(si)) then
         deallocate(si)
     endif
     allocate(si(nlevs+1))
 
-    if allocated(sl) then
+    if (allocated(sl)) then
         deallocate(sl)
     endif
     allocate(sl(nlevs))
 
-    if allocated(ck) then
+    if (allocated(ck)) then
         deallocate(ck)
     endif
     allocate(ck(nlevs))
 
-    if allocated(dbk) then
+    if (allocated(dbk)) then
         deallocate(dbk)
     endif
     allocate(dbk(nlevs))
 
-    if allocated(bkl) then
+    if (allocated(bkl)) then
         deallocate(bkl)
     endif
     allocate(bkl(nlevs))
     !JOY allocated in python
     !allocate(psg(nlons,nlats))
-    if allocated(alfa) then
+    if (allocated(alfa)) then
         deallocate(alfa)
     endif
     allocate(alfa(nlons,nlats,nlevs))
 
-    if allocated(rlnp) then
+    if (allocated(rlnp)) then
         deallocate(rlnp)
     endif
     allocate(rlnp(nlons,nlats,nlevs))
 
-    if allocated(dpk) then
+    if (allocated(dpk)) then
         deallocate(dpk)
     endif
     allocate(dpk(nlons,nlats,nlevs))

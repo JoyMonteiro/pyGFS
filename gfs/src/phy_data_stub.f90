@@ -28,7 +28,7 @@ module phy_data
     allocate(pwat(nlons,nlats))
     pwat = 0.
     allocate(spectral_vort_tend(ndimspec,nlevs), spectral_div_tend(ndimspec,nlevs), spectral_virtemp_tend(ndimspec,nlevs))
-    !allocate(spectral_tracer_tend(ndimspec,nlevs,ntrac))
+    allocate(spectral_tracer_tend(ndimspec,nlevs,ntrac))
     allocate(spectral_lnps_tend(ndimspec))
  end subroutine init_phydata
 
@@ -36,6 +36,7 @@ module phy_data
     deallocate(pwat)
     deallocate(spectral_lnps_tend)
     deallocate(spectral_vort_tend,spectral_div_tend,spectral_virtemp_tend)
+    deallocate(spectral_tracer_tend)
  end subroutine destroy_phydata
 
  subroutine wrtout_sfc(fhour,filename)

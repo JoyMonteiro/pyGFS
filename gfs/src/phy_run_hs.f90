@@ -59,7 +59,7 @@
          dtracerspecdt
      real(r_double), intent(in) :: t,dt
      complex(r_kind), intent(inout), dimension(ndimspec) :: dlnpsspecdt
-     integer k
+     integer k, trac
 
 
      !$omp parallel do private(k)
@@ -67,6 +67,9 @@
      dvrtspecdt(:,k) = spectral_vort_tend(:,k)
      ddivspecdt(:,k) = spectral_div_tend(:,k)
      dvirtempspecdt(:,k) = spectral_virtemp_tend(:,k)
+     do trac=1,ntrac
+         dtracerspecdt(:,k,trac) = spectral_tracer_tend(:,k,trac)
+     enddo
      enddo
      !$omp end parallel do 
      dlnpsspecdt(:) = spectral_lnps_tend(:)
@@ -146,7 +149,7 @@ subroutine set_tendencies(dvrtgdt,ddivgdt,dvirtempgdt,dlnpsgdt,dtracergdt) bind(
         dtracergdt
     real(r_kind), intent(in), dimension(nlons,nlats) :: dlnpsgdt
     !complex(r_kind), dimension(:,:),allocatable :: forcingspec
-    integer k
+    integer k,trac
 
     !allocate(forcingspec(ndimspec,nlevs))
 
@@ -160,6 +163,9 @@ subroutine set_tendencies(dvrtgdt,ddivgdt,dvirtempgdt,dlnpsgdt,dtracergdt) bind(
     !spectral_vort_tend(:,k) = dvrtspecdt(:,k)
     !spectral_div_tend(:,k) = ddivspecdt(:,k) 
     !spectral_virtemp_tend(:,k) = dvirtempspecdt(:,k)
+    do trac=1,ntrac
+        call grdtospec(dtracergdt(:,:,k,ntrac), spectral_tracer_tend(:,k,ntrac))
+    enddo
     enddo
     !$omp end parallel do 
     call grdtospec(dlnpsgdt(:,:), spectral_lnps_tend(:))
