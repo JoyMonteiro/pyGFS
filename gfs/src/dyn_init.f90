@@ -480,21 +480,23 @@ module dyn_init
  subroutine heldsuarez_ics()
    ! jablonowski and williamson (2006, QJR, p. 2943, doi: 10.1256/qj.06.12)
    ! initial perturbation on an isothermal state.
-   real(r_kind), dimension(nlons,nlats) :: rnh,xnh,rsh,xsh
+   real(r_kind), dimension(nlons,nlats) :: rnh,xnh,rsh,xsh, rand_vel
    real(r_kind) :: lonc,latc,up,pertrad
    integer k
    print *,'replacing initial conds with held and suarez test case..'
    lonc = pi/9.
    up = 1.
    pertrad = rerth/10.
-   latc = 2.*pi/9.
+   !JOY changing ICs
+   latc = 0.
+   !latc = 2.*pi/9.
    !xnh = sin(latc)*sin(lats) + cos(latc)*cos(lats)*cos(lons-lonc)
    xnh = sin(latc)*sin(lats) + cos(latc)*cos(lats)
    latc = -2.*pi/9.
    !xsh = sin(latc)*sin(lats) + cos(latc)*cos(lats)*cos(lons-lonc)
    xsh = sin(latc)*sin(lats) + cos(latc)*cos(lats)
    rnh = rerth*acos(xnh)
-   rsh = rerth*acos(xsh)
+   rsh = 0.*rerth*acos(xsh)
    virtempg = 300.  ! isothermal state.
    vg = 0.
    psg = 1.e5
@@ -503,7 +505,10 @@ module dyn_init
    call calc_pressdata(lnpsg)
    do k=1,nlevs
       ! add a barotropic zonal wind perturbation (opp sign in each hemisphere)
-      ug(:,:,k) = up*(exp(-(rnh/pertrad)**2)+exp(-(rsh/pertrad)**2))
+      !JOY changed to single tropical jet
+      call random_number(rand_vel)
+      ug(:,:,k) = up*(exp(-(rnh/pertrad)**2)) + 0.2*rand_vel
+      !ug(:,:,k) = up*(exp(-(rnh/pertrad)**2)+exp(-(rsh/pertrad)**2))
       call getvrtdivspec(ug(:,:,k),vg(:,:,k),vrtspec(:,k),divspec(:,k),rerth)
       call grdtospec(virtempg(:,:,k),virtempspec(:,k))
    enddo
@@ -540,7 +545,7 @@ module dyn_init
       if (ntrunc > 170) fshk = 2.2*hdif_fac
       if (ntrunc == 126) fshk = 1.5*hdif_fac
    end if
-   slrd0=0.002        ! SIGMA LEVEL AT WHICH TO BEGIN RAYLEIGH MOMTUM DAMPING
+   slrd0=0.1        ! SIGMA LEVEL AT WHICH TO BEGIN RAYLEIGH MOMTUM DAMPING
    dmp_prof1=1./taustratdamp ! RECIPROCAL OF TIME SCALE PER SCALE HEIGHT
                       ! ABOVE BEGINNING SIGMA LEVEL FOR RAYLEIGH DAMPING
    dmp_prof = 0.

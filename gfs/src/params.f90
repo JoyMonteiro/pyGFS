@@ -109,7 +109,7 @@ use iso_c_binding, only: c_double,c_int,c_bool
  integer :: ntclw=3 ! cloud condensate tracer number
  integer :: nmtvr=14 ! number of fields in mtnvar file.
  integer :: ngptc=24 ! pass this many profiles to gbphys in one call.
- real(r_kind) :: taustratdamp=5.*86400. ! extra linear drag near top of model
+ real(r_kind) :: taustratdamp=2.*86400. ! extra linear drag near top of model
 ! parameters relevant for GFS physics
  ! interval in hours to call long-wave radiation (0 means every time step)
  real(r_kind) :: fhlwr=0 
