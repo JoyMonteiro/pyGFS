@@ -739,19 +739,18 @@ cdef class _gfs_dynamics:
             uTend,vTend, tempTend,qTend,psTend = increment_list
  
             virtTempTend = tempTend
+            temperature = self.pyVirtTempg/(1+self.fv*q)
+
+            #Additional tendency term while converting to virtual temp -- see Pg. 12 in doc/gfsModelDoc.pdf
             if(np.any(q > 0)):
-                virtTempTend = tempTend*(1+self.fv*q)
+                virtTempTend = tempTend*(1+self.fv*q) + self.fv*temperature*qTend
 
             psTend[psTend==0] = 1.
             lnpsTend = np.log(psTend)
-            #print
-            #print uTend.shape,vTend.shape,virtTempTend.shape,lnpsTend.shape,qTend.shape
-            #print
-    
-    
+
             u,v,virtemp,q,ps = field_list
 
-    
+
             #CliMT gives increments; convert to tendencies
             uTend /= dt
 

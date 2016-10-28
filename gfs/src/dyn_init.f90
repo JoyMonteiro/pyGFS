@@ -507,7 +507,7 @@ module dyn_init
       ! add a barotropic zonal wind perturbation (opp sign in each hemisphere)
       !JOY changed to single tropical jet
       call random_number(rand_vel)
-      ug(:,:,k) = up*(exp(-(rnh/pertrad)**2)) + 0.2*rand_vel
+      ug(:,:,k) = 0.8*rand_vel
       !ug(:,:,k) = up*(exp(-(rnh/pertrad)**2)+exp(-(rsh/pertrad)**2))
       call getvrtdivspec(ug(:,:,k),vg(:,:,k),vrtspec(:,k),divspec(:,k),rerth)
       call grdtospec(virtempg(:,:,k),virtempspec(:,k))
@@ -545,7 +545,7 @@ module dyn_init
       if (ntrunc > 170) fshk = 2.2*hdif_fac
       if (ntrunc == 126) fshk = 1.5*hdif_fac
    end if
-   slrd0=0.1        ! SIGMA LEVEL AT WHICH TO BEGIN RAYLEIGH MOMTUM DAMPING
+   slrd0=0.01        ! SIGMA LEVEL AT WHICH TO BEGIN RAYLEIGH MOMTUM DAMPING
    dmp_prof1=1./taustratdamp ! RECIPROCAL OF TIME SCALE PER SCALE HEIGHT
                       ! ABOVE BEGINNING SIGMA LEVEL FOR RAYLEIGH DAMPING
    dmp_prof = 0.
